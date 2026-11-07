@@ -1,0 +1,29 @@
+# App tuning. Values here can be overridden by environment variables (see .env.example).
+
+voice_sample:
+  min_seconds: 5
+  max_seconds: 15
+  sample_rate: 24000
+  # The user reads this sentence aloud. The recording is the consent record AND the voice reference,
+  # and this text is the reference transcript the TTS model uses for better cloning.
+  consent_sentence: >-
+    I am recording my own voice, and I agree to it being used to create voiceovers for my own videos.
+  # How closely the transcribed recording must match the consent sentence (0..1).
+  consent_match_threshold: 0.8
+
+script:
+  words_per_minute: 150
+  max_target_seconds: 600
+  temperature: 0.7
+
+synthesis:
+  # Long scripts are split into sentence chunks of at most this many characters.
+  max_chunk_chars: 250
+  pause_between_sentences_ms: 250
+
+output:
+  loudness_lufs: -16
+  formats: [wav, mp3]
+  captions: srt
+  # Always on: AI-generated audio is watermarked and labelled. Not configurable on purpose.
+  provenance_label: "AI-generated voice (voiceover-studio)"

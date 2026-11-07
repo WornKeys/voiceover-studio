@@ -1,0 +1,56 @@
+# --- Secrets and local settings (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Voices and generated audio (never commit; see RESPONSIBLE_USE.md) ---
+# The only audio file allowed in the repo is the synthetic demo voice.
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg
+*.oga
+*.opus
+*.flac
+*.aac
+*.aif
+*.aiff
+!samples/demo-voice.wav
+outputs/
+voices/
+data/
+
+# --- Model weights and caches ---
+models/
+.cache/
+hf_cache/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# --- Terraform (the lock file IS committed) ---
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
