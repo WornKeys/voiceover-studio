@@ -7,8 +7,9 @@ import httpx2 as httpx
 import numpy as np
 import pytest
 
+from voiceover_studio.core.audio import write_wav
 from voiceover_studio.providers import registry
-from voiceover_studio.providers.base import ChatMessage, VoiceReference
+from voiceover_studio.providers.base import AudioClip, ChatMessage, VoiceReference
 from voiceover_studio.providers.openai_compat import OpenAICompatLLM, infer_auth, is_local
 from voiceover_studio.providers.storage import LocalStorage, S3Storage
 from voiceover_studio.settings import Settings, build_llm, build_storage
@@ -131,19 +132,24 @@ def test_qwen3_tts_maps_language_and_passes_reference_transcript(monkeypatch):
         tts.synthesize("Namaste.", VoiceReference(Path("v.wav"), "t", "c1"), "hi")
 
 
-def test_faster_whisper_joins_segments(monkeypatch):
+def test_faster_whisper_gets_16k_samples_not_a_file_path(monkeypatch, tmp_path):
+    received = {}
+
     class FakeWhisper:
         def __init__(self, model, device, compute_type):
             self.args = (model, device, compute_type)
 
-        def transcribe(self, path, language, beam_size):
+        def transcribe(self, audio, language, beam_size):
+            received["audio"] = audio
             return iter(
                 [types.SimpleNamespace(text=" I am recording"), types.SimpleNamespace(text=" my voice.")]
             ), {}
 
     monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=FakeWhisper))
+    wav = write_wav(AudioClip(np.zeros(24000, dtype=np.float32), 24000), tmp_path / "sample.wav")
     asr = registry.create("asr", "faster_whisper", model="small", device="cpu", compute_type="int8")
-    assert asr.transcribe(Path("sample.wav"), "en") == "I am recording my voice."
+    assert asr.transcribe(wav, "en") == "I am recording my voice."
+    assert isinstance(received["audio"], np.ndarray) and len(received["audio"]) == 16000  # 1 s at 16 kHz
 
 
 # --- Settings ---------------------------------------------------------------
