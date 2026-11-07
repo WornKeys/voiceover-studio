@@ -30,8 +30,10 @@ class PluginContext:
     script: str
     language: str
     target_seconds: float | None
+    words_per_minute: int
     llm: LLMProvider
     tts: TTSProvider
+    # Plain-language messages shown to the user (what the plugin did, or why it did nothing).
     notes: list[str] = field(default_factory=list)
 
 

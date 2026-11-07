@@ -9,6 +9,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy>=2.0",
     "pydantic>=2.9",
+    "pyloudnorm>=0.1.1",
     "pyyaml>=6.0",
 ]
 
