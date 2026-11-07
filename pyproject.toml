@@ -7,11 +7,16 @@ license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "boto3>=1.35",
     "numpy>=2.0",
+    "openai[bedrock]>=3.46",
     "pydantic>=2.9",
     "pyloudnorm>=0.1.1",
     "pyyaml>=6.0",
 ]
+
+[project.optional-dependencies]
+bedrock = []
 
 [dependency-groups]
 dev = [
