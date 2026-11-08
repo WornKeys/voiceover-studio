@@ -1,0 +1,14 @@
+#!/bin/bash
+# First boot only (cloud-init). Installs the idle auto-stop so the instance stops itself even if no deploy
+# ever finishes. Everything else (Docker images, models, the app) is installed by scripts/deploy.sh.
+set -euo pipefail
+
+mkdir -p /opt/voiceover/bin /run/voiceover
+echo "${idle_stop_minutes}" > /opt/voiceover/idle-minutes
+echo "${idle_stop_sh}" | base64 -d > /opt/voiceover/bin/idle-stop.sh
+echo "${idle_service}" | base64 -d > /etc/systemd/system/voiceover-idle.service
+echo "${idle_timer}" | base64 -d > /etc/systemd/system/voiceover-idle.timer
+chmod 755 /opt/voiceover/bin/idle-stop.sh
+
+systemctl daemon-reload
+systemctl enable --now voiceover-idle.timer

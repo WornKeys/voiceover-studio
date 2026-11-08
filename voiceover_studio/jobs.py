@@ -74,5 +74,10 @@ class JobManager:
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
+    def busy(self) -> bool:
+        """True while a job is queued or running (the instance must not auto-stop)."""
+        with self._lock:
+            return any(job.status in ("queued", "running") for job in self._jobs.values())
+
     def shutdown(self) -> None:
         self._pool.shutdown(wait=False, cancel_futures=True)

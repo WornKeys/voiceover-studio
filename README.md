@@ -31,13 +31,30 @@ describe the video ─▶ LLM drafts script ─▶ you edit + approve ─▶ plu
 Clone **only your own voice**, or a voice whose owner has agreed. Tell your audience the voice is AI-generated.
 See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 
+## Run it in your AWS account
+
+```bash
+cp .env.example .env                       # set BUDGET_EMAIL
+aws login --profile voiceover-operator
+./scripts/deploy.sh                        # first time: 20-40 minutes
+./scripts/connect.sh                       # then open http://localhost:7860
+./scripts/destroy.sh                       # when you're done: removes everything and checks
+```
+
+Needs Docker and the AWS CLI v2, plus a one-time account setup and a GPU quota. Costs, auto-stop and
+troubleshooting: [docs/deploy.md](docs/deploy.md).
+
 ## Layout
 
 | Path | What |
 |---|---|
+| `voiceover_studio/core/` | The fixed workflow: script, chunking, consent, watermark, render |
 | `voiceover_studio/providers/` | Provider interfaces (TTS, LLM, speech-to-text, storage) and the registry |
 | `voiceover_studio/plugins/` | Plugins: `fit_to_length`, `translate`. Write your own: [docs/plugins.md](docs/plugins.md) |
 | `config.yaml`, `.env.example` | App settings and deployment settings |
+| `Dockerfile`, `docker/compose.yaml` | The app image and the two containers on the instance (app + vLLM) |
+| `infra/terraform/`, `infra/instance/` | AWS resources; install/update and idle auto-stop on the instance |
+| `scripts/*.sh`, `toolbox/` | Deploy, connect, start, stop, status, secrets, destroy (run in a toolbox container) |
 | `scripts/check_no_audio.py` | Keeps voice recordings out of git (pre-commit + CI) |
 
 ## Development
@@ -47,6 +64,7 @@ uv sync                      # Python 3.12 + dev tools
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
 uv tool install pre-commit && pre-commit install
+uv sync --extra gpu          # optional: the real models (Linux + NVIDIA GPU; CPU works, slowly)
 ```
 
 ## License

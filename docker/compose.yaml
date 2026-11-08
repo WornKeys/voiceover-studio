@@ -1,0 +1,72 @@
+# Runs on the instance (infra/instance/update.sh):
+#   docker compose -f docker/compose.yaml --env-file /opt/voiceover/app.env --env-file /opt/voiceover/secrets.env up -d
+# Two services on one GPU: the app (voice model, watermark) and, when the LLM is local, vLLM.
+name: voiceover-studio
+
+x-gpu: &gpu
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]
+
+x-logging: &logging
+  logging:
+    driver: awslogs # to CloudWatch Logs (the instance role may write only to /voiceover-studio/*)
+    options:
+      awslogs-region: ${AWS_REGION}
+      awslogs-group: /voiceover-studio/app
+      awslogs-create-group: "false"
+      tag: "{{.Name}}"
+
+services:
+  llm:
+    # The script writer: Qwen3.5-9B (4-bit) behind an OpenAI-compatible API, only reachable from the app.
+    image: vllm/vllm-openai:v0.32.0
+    profiles: [local-llm] # left out when LLM_BASE_URL points to a hosted endpoint (e.g. Bedrock)
+    restart: unless-stopped
+    ipc: host
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - /opt/voiceover/cache/llm:/root/.cache/huggingface
+    command:
+      - ${LLM_MODEL}
+      # Share the GPU: vLLM takes this fraction of its memory, the voice model uses the rest.
+      - --gpu-memory-utilization=${LLM_GPU_MEMORY:-0.5}
+      # Scripts are short: a small context keeps the KV cache (and the memory it needs) small.
+      - --max-model-len=${LLM_MAX_MODEL_LEN:-8192}
+      - --max-num-seqs=4
+      # Qwen3.5 is a vision-language model; we only need text, so the vision encoder isn't loaded.
+      - --language-model-only
+      # No hidden "thinking" before the answer: faster and cleaner scripts.
+      - '--default-chat-template-kwargs={"enable_thinking": false}'
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30m # first start downloads ~9 GB
+    <<: [*gpu, *logging]
+
+  app:
+    image: voiceover-studio-app:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - /opt/voiceover/app.env
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    ports:
+      - "127.0.0.1:7860:7860" # only on the instance's loopback: reached through the SSM tunnel, never the internet
+    volumes:
+      - /opt/voiceover/cache/app:/cache
+    depends_on:
+      llm:
+        condition: service_healthy
+        required: false # not started when the LLM is hosted
+    <<: [*gpu, *logging]

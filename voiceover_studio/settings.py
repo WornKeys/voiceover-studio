@@ -28,13 +28,16 @@ class Settings:
 
     llm_provider: str = "openai_compat"
     llm_base_url: str = "http://llm:8000/v1"
-    llm_model: str = "Qwen/Qwen3.5-9B"
+    llm_model: str = "cyankiwi/Qwen3.5-9B-AWQ-4bit"  # Qwen3.5-9B, 4-bit AWQ (Apache-2.0), ~9 GB of VRAM
     llm_api_key_param: str = ""
     llm_auth: str = ""  # none | ssm | bedrock; empty = inferred from the URL and key parameter
     llm_disable_thinking: bool = True
 
     asr_provider: str = "faster_whisper"
     asr_model: str = "small"
+    # Whisper only checks the short consent clip, so the CPU is fast enough and the GPU memory stays free for
+    # the two big models. (Its CUDA build also lags the CUDA version torch uses.)
+    asr_device: str = "cpu"
 
     storage_provider: str = "s3"
     storage_bucket: str = ""
@@ -62,10 +65,11 @@ class Settings:
     def resolved_compute_profile(self) -> Literal["gpu", "cpu"]:
         if self.compute_profile in ("gpu", "cpu"):
             return self.compute_profile  # type: ignore[return-value]
+        # Keep in step with resolve_profile in scripts/toolbox/lib.sh (the deploy scripts decide the same).
         local_tts = self.tts_provider not in HOSTED_TTS
         local_llm = is_local(self.llm_base_url)
-        local_asr = self.asr_provider == "faster_whisper"
-        return "gpu" if (local_tts or local_llm or local_asr) else "cpu"
+        gpu_asr = self.asr_provider == "faster_whisper" and self.asr_device == "cuda"
+        return "gpu" if (local_tts or local_llm or gpu_asr) else "cpu"
 
 
 def build_tts(s: Settings) -> TTSProvider:
@@ -88,8 +92,10 @@ def build_llm(s: Settings) -> LLMProvider:
 
 
 def build_asr(s: Settings) -> ASRProvider:
-    compute = "float16" if s.device == "cuda" else "int8"
-    return registry.create("asr", s.asr_provider, model=s.asr_model, device=s.device, compute_type=compute)  # type: ignore[return-value]
+    compute = "float16" if s.asr_device == "cuda" else "int8"
+    return registry.create(
+        "asr", s.asr_provider, model=s.asr_model, device=s.asr_device, compute_type=compute
+    )  # type: ignore[return-value]
 
 
 def build_storage(s: Settings) -> StorageProvider:

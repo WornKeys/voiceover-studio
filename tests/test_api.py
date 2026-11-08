@@ -4,7 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.fakes import RATE, FakeLLM, FakeTTS, FakeWatermarker, tone
-from voiceover_studio.api import create_app
+from voiceover_studio.api import ActivityTracker, create_app
 from voiceover_studio.core.audio import write_wav
 from voiceover_studio.core.config import load_config
 from voiceover_studio.providers.base import ASRProvider
@@ -123,6 +123,25 @@ def test_translate_plugin_offers_the_voice_models_languages_and_switches_languag
         "/api/plugins/translate", json={"script": "Hello.", "settings": {"target_language": "hi"}}
     )
     assert r.status_code == 422 and "can't speak" in r.json()["detail"]["message"]
+
+
+def test_activity_counts_actions_and_page_loads_but_not_polling():
+    now = [100.0]
+    tracker = ActivityTracker(clock=lambda: now[0])
+    now[0] = 400.0
+    tracker.observe("GET", "/gradio_api/heartbeat/abc")  # an open tab polling
+    assert tracker.idle_seconds() == 300
+    tracker.observe("POST", "/gradio_api/queue/join")  # a button click
+    assert tracker.idle_seconds() == 0
+    now[0] = 460.0
+    tracker.observe("GET", "/")  # opening the UI
+    now[0] = 470.0
+    assert tracker.idle_seconds() == 10
+
+
+def test_activity_endpoint_reports_idle_time_and_running_jobs(tmp_path):
+    body = make_client(tmp_path).get("/api/activity").json()
+    assert body["busy"] is False and body["idle_seconds"] >= 0
 
 
 def test_wrong_sentence_is_rejected_as_no_consent(tmp_path):

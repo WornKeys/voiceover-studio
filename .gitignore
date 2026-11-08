@@ -22,6 +22,8 @@
 outputs/
 voices/
 data/
+# Downloads made by scripts/destroy.sh (voice recordings and outputs from the bucket)
+backups/
 
 # --- Model weights and caches ---
 models/

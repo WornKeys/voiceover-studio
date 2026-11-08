@@ -166,10 +166,11 @@ def test_settings_from_env_and_derived_values(tmp_path):
         }
     )
     assert s.resolved_llm_auth == "bedrock" and s.llm_disable_thinking is False
-    assert s.resolved_compute_profile == "gpu"  # the voice model and Whisper still run locally
+    assert s.resolved_compute_profile == "gpu"  # the voice model still runs locally
     assert isinstance(build_storage(s), LocalStorage)
     assert build_llm(s).capabilities().runs_locally is False
     assert Settings.from_env({"COMPUTE_PROFILE": "cpu"}).resolved_compute_profile == "cpu"
+    assert s.asr_device == "cpu"  # Whisper on the CPU by default: it doesn't need the GPU
 
 
 def test_registry_lists_builtin_providers():

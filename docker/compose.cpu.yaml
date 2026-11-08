@@ -1,0 +1,7 @@
+# COMPUTE_PROFILE=cpu: every model is hosted (no local voice model or LLM), so no GPU is reserved.
+# Added by infra/instance/update.sh on top of compose.yaml.
+services:
+  app:
+    deploy: !reset {}
+    environment:
+      DEVICE: cpu

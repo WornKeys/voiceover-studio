@@ -1,0 +1,22 @@
+# Keep the build context small and free of secrets, voices and local state.
+.git
+.github
+.venv
+.env
+.env.*
+**/__pycache__
+.pytest_cache
+.ruff_cache
+infra/terraform/.terraform
+infra/terraform/*.tfstate*
+build/
+backups/
+data/
+outputs/
+voices/
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg
+*.flac

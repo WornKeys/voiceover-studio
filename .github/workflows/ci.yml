@@ -33,3 +33,28 @@ jobs:
 
       - name: No secrets in history
         run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.21.2 git --redact --no-banner /repo
+
+  infra:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Terraform format and validate
+        run: |
+          tf() { docker run --rm -v "$PWD:/work" -w /work/infra/terraform hashicorp/terraform:1.16.7 "$@"; }
+          tf fmt -check -recursive -diff
+          tf init -backend=false -input=false
+          tf validate
+
+      - name: Shell scripts
+        run: >
+          docker run --rm -v "$PWD:/mnt" -w /mnt koalaman/shellcheck:v0.11.0 --external-sources
+          scripts/*.sh scripts/lib/*.sh scripts/toolbox/*.sh infra/instance/*.sh
+
+      - name: Compose file
+        run: |
+          sudo mkdir -p /opt/voiceover && sudo touch /opt/voiceover/app.env
+          AWS_REGION=us-east-1 LLM_MODEL=test docker compose -f docker/compose.yaml --profile local-llm config --quiet
+
+      - name: Toolbox image (pinned tool versions still download)
+        run: docker build -t voiceover-toolbox:ci toolbox

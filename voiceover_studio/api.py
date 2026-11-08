@@ -5,9 +5,10 @@ The API is reached only through the SSM tunnel (localhost), never from the inter
 
 from __future__ import annotations
 
+import time
 from typing import Annotated, Any
 
-from fastapi import FastAPI, File, HTTPException, Path, UploadFile
+from fastapi import FastAPI, File, HTTPException, Path, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
@@ -49,15 +50,45 @@ class RenderIn(BaseModel):
     language: str = "en"
 
 
+class ActivityTracker:
+    """When did the user last do something? Opening the UI and any action (a POST, PUT or DELETE:
+    button clicks in the UI, API calls) count. Reads don't: an open browser tab keeps polling with GETs,
+    and a forgotten tab must not keep a GPU instance running."""
+
+    READS = frozenset({"GET", "HEAD", "OPTIONS"})
+
+    def __init__(self, clock=time.monotonic):
+        self._clock = clock
+        self._last = clock()
+
+    def observe(self, method: str, path: str) -> None:
+        if method not in self.READS or path == "/":
+            self._last = self._clock()
+
+    def idle_seconds(self) -> int:
+        return int(self._clock() - self._last)
+
+
 def create_app(services: Services) -> FastAPI:
     app = FastAPI(
         title="voiceover-studio", version=__version__, docs_url="/api/docs", openapi_url="/api/openapi.json"
     )
     app.state.services = services
+    activity = ActivityTracker()
+
+    @app.middleware("http")
+    async def track_activity(request: Request, call_next):
+        activity.observe(request.method, request.url.path)
+        return await call_next(request)
 
     @app.get("/api/health")
     def health() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
+
+    @app.get("/api/activity")
+    def idle() -> dict[str, Any]:
+        """Read by the instance's idle timer, which stops the instance after IDLE_STOP_MINUTES."""
+        return {"idle_seconds": activity.idle_seconds(), "busy": services.jobs.busy()}
 
     @app.get("/api/info")
     def info() -> dict[str, Any]:

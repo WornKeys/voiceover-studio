@@ -1,5 +1,0 @@
-# GPU-only dependencies for the app image (Linux, CUDA). Compiled to requirements-gpu.txt with:
-#   uv pip compile docker/requirements-gpu.in --python-version 3.12 --python-platform x86_64-manylinux_2_28 -o docker/requirements-gpu.txt
-qwen-tts
-audioseal
-faster-whisper

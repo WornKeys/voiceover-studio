@@ -1,0 +1,6 @@
+[Unit]
+Description=Stop the instance when the voiceover studio is idle
+
+[Service]
+Type=oneshot
+ExecStart=/opt/voiceover/bin/idle-stop.sh
