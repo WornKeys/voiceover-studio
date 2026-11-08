@@ -17,12 +17,23 @@ env_value() {
   sed -n "s/^$1=//p" "$ROOT/.env" | tail -n 1 | tr -d '\r"'
 }
 
+# Git Bash on Windows rewrites arguments that look like Unix paths (/work -> C:/Program Files/Git/work) when it
+# starts a Windows program such as docker.exe. So: Windows paths for the host side, conversion switched off, and
+# no bare /path arguments in the docker command (the mount uses --mount, the working directory is the image's).
+HOST_ROOT=$ROOT
+case "${OSTYPE:-}" in
+  msys* | cygwin*)
+    HOST_ROOT=$(cd "$ROOT" && pwd -W)
+    export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL="*"
+    ;;
+esac
+
 toolbox_image() {
   local tag
   tag="voiceover-toolbox:$(cksum <"$ROOT/toolbox/Dockerfile" | cut -d' ' -f1)"
   if ! docker image inspect "$tag" >/dev/null 2>&1; then
     echo "Building the toolbox image (first run only, about a minute)..." >&2
-    docker build -t "$tag" "$ROOT/toolbox" >&2
+    docker build -t "$tag" "$HOST_ROOT/toolbox" >&2
   fi
   echo "$tag"
 }
@@ -54,20 +65,16 @@ run_in_toolbox() {
 $creds
 EOF
 
-  local image host_root args prefix
+  local image args prefix
   image=$(toolbox_image)
-  host_root=$ROOT
   prefix=()
-  case "${OSTYPE:-}" in
-    msys* | cygwin*) # Git Bash on Windows: Docker needs a Windows path, and an interactive terminal needs winpty
-      host_root=$(cd "$ROOT" && pwd -W)
-      export MSYS_NO_PATHCONV=1
-      if [ -t 0 ] && command -v winpty >/dev/null; then prefix=(winpty); fi
-      ;;
-  esac
+  # The Git Bash window (mintty) isn't a Windows console, so docker.exe needs winpty for an interactive terminal.
+  # Git Bash started from PowerShell or Windows Terminal runs in a real console and doesn't.
+  if [ "${TERM_PROGRAM:-}" = mintty ] && [ -t 0 ] && command -v winpty >/dev/null; then prefix=(winpty); fi
 
   # Credentials are passed by name (-e VAR), so their values don't appear in the process list.
-  args=(run --rm --init -i -v "$host_root:/work" -w /work
+  # The image's working directory is /work, where the repo is mounted.
+  args=(run --rm --init -i --mount "type=bind,source=$HOST_ROOT,target=/work"
     -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_CREDENTIAL_EXPIRATION)
   if [ -t 0 ] && [ -t 1 ]; then args+=(-t); fi
   if [ "$(uname -s)" = Linux ]; then args+=(--user "$(id -u):$(id -g)"); fi # files in the repo stay yours
