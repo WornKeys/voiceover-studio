@@ -113,7 +113,7 @@ takes a theme. Light and dark follow the browser's setting.
 Browsers only allow microphone access on secure pages: HTTPS, or `localhost`. The studio has no public address
 and no certificate; through the SSM tunnel (chapter 4) it's `http://localhost:7860`, which counts as secure. One
 browser-specific catch: in Brave, the recorder freezes. Brave's fingerprinting protection slows down how pages
-read recorded audio, and Gradio's recorder reads it one sample at a time. Firefox works.
+read recorded audio, and Gradio's recorder reads it one sample at a time. Firefox works, and so do Chrome and Edge (tested with a simulated microphone, 2026-11-08).
 
 ## How the UI is tested without a browser
 

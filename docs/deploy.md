@@ -148,7 +148,7 @@ carries the tag `project=voiceover-studio`, so **Resource Groups > Tag Editor** 
 | Your AWS session expired during a long deploy | The install keeps running on the instance. Sign in again and run `./scripts/deploy.sh --follow` |
 | `An install is already running on the instance` | Follow it: `./scripts/deploy.sh --follow` |
 | Docker on Windows: "the input device is not a TTY" | Use Git Bash (the scripts use `winpty` there) or WSL |
-| Recording: the timer doesn't move, playback doesn't work, the page freezes (Brave) | Brave's fingerprinting protection alters audio data that pages read, which makes the recorder's audio encoding very slow ([gradio#13898](https://github.com/gradio-app/gradio/issues/13898)). Use Firefox, or turn off Shields → "Block fingerprinting" for `localhost`. Or upload a recording made with another app |
+| Recording: the timer doesn't move, playback doesn't work, the page freezes (Brave) | Brave's fingerprinting protection alters audio data that pages read, which makes the recorder's audio encoding very slow ([gradio#13898](https://github.com/gradio-app/gradio/issues/13898)). Use Firefox, Chrome or Edge, or turn off Shields → "Block fingerprinting" for `localhost`. Or upload a recording made with another app |
 
 ## How it fits together
 

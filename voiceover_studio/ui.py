@@ -182,7 +182,7 @@ def build_ui(services: Services) -> gr.Blocks:
                 "**Record a new voice.** Click the microphone, read the sentence below aloud in a quiet room, "
                 "then stop. Listen back, and save it. "
                 f"It should take {info['sample_seconds']['min']:.0f} to {info['sample_seconds']['max']:.0f} "
-                "seconds. Firefox works best (Brave's fingerprinting protection freezes the recorder)."
+                "seconds. Use Firefox, Chrome or Edge: in Brave, fingerprinting protection freezes the recorder."
             )
             gr.Markdown(f'> ### "{info["consent_sentence"]}"')
             gr.Markdown(
