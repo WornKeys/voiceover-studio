@@ -14,7 +14,7 @@ from typing import Any, ClassVar
 
 from pydantic import BaseModel
 
-from voiceover_studio.providers.base import LLMProvider, TTSProvider
+from voiceover_studio.providers.base import LLMProvider, TTSCapabilities, TTSProvider
 
 
 class Stage(StrEnum):
@@ -28,7 +28,7 @@ class PluginContext:
     """What a plugin can see and change. Providers are passed in so plugins never pick a model themselves."""
 
     script: str
-    language: str
+    language: str  # a plugin may change it (translation does); the UI follows
     target_seconds: float | None
     words_per_minute: int
     llm: LLMProvider
@@ -45,14 +45,20 @@ class Plugin(ABC):
     Settings: ClassVar[type[BaseModel]]
 
     @classmethod
-    def manifest(cls) -> dict[str, Any]:
+    def settings_schema(cls, tts: TTSCapabilities | None = None) -> dict[str, Any]:
+        """JSON schema of the settings. Override it to fill in choices that depend on the providers,
+        such as the languages the current voice model can speak."""
+        return cls.Settings.model_json_schema()
+
+    @classmethod
+    def manifest(cls, tts: TTSCapabilities | None = None) -> dict[str, Any]:
         """What GET /api/plugins returns for this plugin."""
         return {
             "name": cls.name,
             "title": cls.title,
             "description": cls.description,
             "stage": cls.stage.value,
-            "settings_schema": cls.Settings.model_json_schema(),
+            "settings_schema": cls.settings_schema(tts),
         }
 
     @abstractmethod

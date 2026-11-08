@@ -2,8 +2,9 @@
 
 from voiceover_studio.plugins.base import Plugin, PluginContext, Stage
 from voiceover_studio.plugins.fit_to_length import FitToLength
+from voiceover_studio.plugins.translate import Translate
 
-AVAILABLE: dict[str, type[Plugin]] = {FitToLength.name: FitToLength}
+AVAILABLE: dict[str, type[Plugin]] = {FitToLength.name: FitToLength, Translate.name: Translate}
 
 
 class UnknownPluginError(LookupError):
@@ -27,6 +28,7 @@ __all__ = [
     "Plugin",
     "PluginContext",
     "Stage",
+    "Translate",
     "UnknownPluginError",
     "enabled_plugins",
 ]

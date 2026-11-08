@@ -120,7 +120,7 @@ class Services:
             "voice_leaves_account": not caps.runs_locally,
             "words_per_minute": self.cfg.script.words_per_minute,
             "max_target_seconds": self.cfg.script.max_target_seconds,
-            "plugins": [p.manifest() for p in self.plugins.values()],
+            "plugins": [p.manifest(caps) for p in self.plugins.values()],
             "compute_profile": self.settings.resolved_compute_profile,
         }
 
@@ -201,7 +201,7 @@ class Services:
         )
         ctx = plugin_cls().run(ctx, plugin_cls.Settings.model_validate(settings))
         draft = self.estimate(ctx.script)
-        return {"script": ctx.script, "notes": ctx.notes, "words": draft.words,
+        return {"script": ctx.script, "language": ctx.language, "notes": ctx.notes, "words": draft.words,
                 "estimated_seconds": round(draft.estimated_seconds, 1)}  # fmt: skip
 
     # --- renders ----------------------------------------------------------------------

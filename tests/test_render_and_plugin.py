@@ -75,5 +75,5 @@ def test_fit_to_length_skips_without_target_or_when_already_close():
 def test_plugins_setting_is_parsed_and_validated():
     assert enabled_plugins(" fit_to_length ") == [FitToLength]
     assert enabled_plugins("") == []
-    with pytest.raises(UnknownPluginError, match="translate"):
-        enabled_plugins("fit_to_length,translate")
+    with pytest.raises(UnknownPluginError, match="background_music"):
+        enabled_plugins("fit_to_length,background_music")

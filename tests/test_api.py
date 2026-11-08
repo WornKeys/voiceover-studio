@@ -30,12 +30,16 @@ def no_conversion(data: bytes, rate: int) -> bytes:
 
 
 def make_client(
-    tmp_path, heard: str = CFG.voice_sample.consent_sentence, llm_reply: str = "Hello there. Welcome."
+    tmp_path,
+    heard: str = CFG.voice_sample.consent_sentence,
+    llm_reply: str = "Hello there. Welcome.",
+    plugins: str = "fit_to_length",
+    languages: tuple[str, ...] = ("en",),
 ):
     services = Services(
-        Settings(plugins="fit_to_length"),
+        Settings(plugins=plugins),
         CFG,
-        tts=FakeTTS(),
+        tts=FakeTTS(languages=languages),
         llm=FakeLLM(llm_reply),
         asr=FakeASR(heard),
         storage=LocalStorage(root=str(tmp_path / "store")),
@@ -99,6 +103,26 @@ def test_full_flow_voice_script_plugin_render_download(tmp_path):
 
     assert client.delete(f"/api/voices/{voice_id}").status_code == 204
     assert client.get("/api/voices").json() == []
+
+
+def test_translate_plugin_offers_the_voice_models_languages_and_switches_language(tmp_path):
+    client = make_client(
+        tmp_path, llm_reply="Hola. Bienvenidos.", plugins="fit_to_length,translate", languages=("en", "es")
+    )
+    translate = client.get("/api/info").json()["plugins"][1]
+    assert translate["settings_schema"]["properties"]["target_language"]["enum"] == ["en", "es"]
+
+    r = client.post(
+        "/api/plugins/translate",
+        json={"script": "Hello there. Welcome.", "settings": {"target_language": "es"}},
+    )
+    assert (
+        r.status_code == 200 and r.json()["language"] == "es" and r.json()["script"] == "Hola. Bienvenidos."
+    )
+    r = client.post(
+        "/api/plugins/translate", json={"script": "Hello.", "settings": {"target_language": "hi"}}
+    )
+    assert r.status_code == 422 and "can't speak" in r.json()["detail"]["message"]
 
 
 def test_wrong_sentence_is_rejected_as_no_consent(tmp_path):

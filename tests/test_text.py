@@ -44,3 +44,26 @@ def test_typographic_apostrophes_quotes_and_dashes():
     assert split_sentences(text) == [f"She said {chr(0x201C)}done.{close_quote}", "Then we ship."]
     chunks = chunk_text(f"We record the voice{em_dash} then we write the script and render it.", 30)
     assert chunks[0] == f"We record the voice{em_dash}"
+
+
+# Chinese/Japanese stand-ins: ideographs and full-width punctuation, written without spaces.
+ONE, TWO, THREE = chr(0x4E00), chr(0x4E8C), chr(0x4E09)
+FULL_STOP, BANG, QUESTION, COMMA = chr(0x3002), chr(0xFF01), chr(0xFF1F), chr(0xFF0C)
+
+
+def test_cjk_sentences_end_without_a_space():
+    s1, s2, s3 = ONE * 8 + FULL_STOP, TWO * 5 + BANG, THREE * 6 + QUESTION
+    assert split_sentences(s1 + s2 + s3) == [s1, s2, s3]
+    assert split_sentences("It works. " + s1) == ["It works.", s1]
+
+
+def test_cjk_long_sentence_splits_at_full_width_commas_without_adding_spaces():
+    sentence = (ONE * 10 + COMMA) * 3 + TWO * 5 + FULL_STOP
+    chunks = chunk_text(sentence, 25)
+    assert all(len(c) <= 25 for c in chunks) and len(chunks) == 2
+    assert "".join(chunks) == sentence
+
+
+def test_cjk_characters_count_as_half_a_word():
+    assert word_count(ONE * 10) == 5
+    assert word_count("AWS " + ONE * 4 + FULL_STOP) == 3

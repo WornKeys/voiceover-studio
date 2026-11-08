@@ -153,11 +153,17 @@ def build_ui(services: Services) -> gr.Blocks:
                     notes = gr.Markdown()
 
                     def run(script_text, lang, target, *values, _name=manifest["name"], _keys=tuple(props)):
-                        result = services.run_plugin(_name, script_text or "", lang, float(target),
-                                                     dict(zip(_keys, values, strict=True)))  # fmt: skip
-                        return result["script"], estimate(result["script"]), "\n".join(result["notes"])
+                        try:
+                            result = services.run_plugin(_name, script_text or "", lang, float(target),
+                                                         dict(zip(_keys, values, strict=True)))  # fmt: skip
+                        except (ValueError, LookupError) as exc:  # includes refusals and bad settings
+                            return gr.update(), gr.update(), gr.update(), f"**Not applied.** {exc}"
+                        return (result["script"], result["language"], estimate(result["script"]),
+                                "\n".join(result["notes"]))  # fmt: skip
 
-                    apply.click(run, [script, language, seconds, *controls], [script, script_info, notes])
+                    apply.click(
+                        run, [script, language, seconds, *controls], [script, language, script_info, notes]
+                    )
 
         with gr.Tab("3. Generate"):
             go = gr.Button("Generate voiceover", variant="primary")

@@ -36,7 +36,7 @@ See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 | Path | What |
 |---|---|
 | `voiceover_studio/providers/` | Provider interfaces (TTS, LLM, speech-to-text, storage) and the registry |
-| `voiceover_studio/plugins/` | Plugin interface |
+| `voiceover_studio/plugins/` | Plugins: `fit_to_length`, `translate`. Write your own: [docs/plugins.md](docs/plugins.md) |
 | `config.yaml`, `.env.example` | App settings and deployment settings |
 | `scripts/check_no_audio.py` | Keeps voice recordings out of git (pre-commit + CI) |
 
