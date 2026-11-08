@@ -193,7 +193,7 @@ exit \$rc"
 # Follow the background install (infra/instance/start-update.sh): print new lines of its log every 15 seconds
 # until it ends. Succeeds if update.sh finished with exit code 0. Ctrl+C stops watching, not the install.
 follow_update() {
-  local id=$1 shown=0 out state result lines count
+  local id=$1 shown=0 out state result lines count new_lines
   while :; do
     # Lines are capped at 200 characters and 100 per poll: SSM returns at most 24,000 characters of output.
     out=$(run_remote "$id" 60 "start=\$(cat /opt/voiceover/update-log-start 2>/dev/null || echo 0)
@@ -206,8 +206,9 @@ tail -n +\$((start + $shown + 1)) /var/log/voiceover-update.log 2>/dev/null | he
     lines=$(tail -n +3 <<<"$out")
     count=0
     if [[ -n "$lines" ]]; then
-      sed 's/^/    /' <<<"$lines"
-      count=$(wc -l <<<"$lines")
+      mapfile -t new_lines <<<"$lines"
+      printf '    %s\n' "${new_lines[@]}"
+      count=${#new_lines[@]}
       shown=$((shown + count))
     fi
     if [[ "$state" != active && "$state" != activating ]]; then
