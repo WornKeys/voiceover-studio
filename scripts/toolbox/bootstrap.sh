@@ -223,10 +223,18 @@ if ! exists aws iam get-user --user-name "$OPERATOR"; then
   plan + "Create the user $OPERATOR (no access keys; you add its password and MFA)" user
 else
   ok "User $OPERATOR exists"
-  current=$(aws iam get-user-policy --user-name "$OPERATOR" --policy-name "$OPERATOR" \
-    --query PolicyDocument --output json 2>/dev/null || echo '{}')
-  if same_json "$operator_policy" "$current"; then
-    ok "Its inline policy (assume the deploy role only) is up to date"
+  # Set up by hand, the inline policy may have any name: accept a matching one whatever it's called.
+  matching=""
+  for name in $(aws iam list-user-policies --user-name "$OPERATOR" --query 'PolicyNames[]' --output text); do
+    current=$(aws iam get-user-policy --user-name "$OPERATOR" --policy-name "$name" \
+      --query PolicyDocument --output json)
+    if same_json "$operator_policy" "$current"; then
+      matching=$name
+      break
+    fi
+  done
+  if [[ -n "$matching" ]]; then
+    ok "Its inline policy ($matching: assume the deploy role only) is up to date"
   else
     plan "~" "Set its inline policy: it may only assume $ROLE" user_policy
   fi

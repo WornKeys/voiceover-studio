@@ -296,6 +296,7 @@ default loads its latest version unless you set one.
 - MP3 output isn't implemented (WAV, SRT and provenance only).
 - Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
   `qwen-tts` 0.1.1 blocks. Firefox works.
-- `scripts/bootstrap.sh` is tested against a fake AWS CLI (fresh account, finished account, removal), not yet
-  against a real account.
+- `scripts/bootstrap.sh` ran once against the real (hand-configured) account on 2026-11-08: it added the two
+  missing pieces and, before the fix below, a duplicate operator policy. `--remove` and a fresh account are
+  tested against a fake AWS CLI only.
 - Not built: Fish Audio provider, Bedrock IAM additions, synthetic demo voice, "re-generate one sentence".
