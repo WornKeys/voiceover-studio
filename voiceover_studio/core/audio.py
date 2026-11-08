@@ -49,7 +49,7 @@ def rms_dbfs(samples: np.ndarray) -> float:
 
 
 def normalize_loudness(clip: AudioClip, target_lufs: float, peak_ceiling_db: float = -1.0) -> AudioClip:
-    """Match a loudness target (online video: about -16 LUFS), then make sure peaks stay below the ceiling."""
+    """Match a loudness target (-16 LUFS by default), then keep peaks below the ceiling."""
     samples = np.asarray(clip.samples, dtype=np.float64)
     if len(samples) < int(0.4 * clip.sample_rate):  # the loudness meter needs at least 400 ms
         return clip

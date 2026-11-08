@@ -107,8 +107,9 @@ generating. With a saved voice, step 1 starts done. The step handlers are plain 
 - No cloning without a consent record. Whisper transcribes the recording and it must match the sentence
   (`consent_match_threshold`).
 - Script requests that ask to impersonate someone are refused, both before the LLM call and by the LLM's instructions.
-- Every output is watermarked (AudioSeal, 16-bit message) and labelled "AI-generated" in the WAV metadata and
-  `provenance.json`. This is not a setting.
+- Every output is watermarked (AudioSeal, 16-bit message, computed at 16 kHz so it survives resampling) and
+  labelled "AI-generated" in the WAV metadata and `provenance.json`. This is not a setting.
+  `scripts/check_watermark.py` checks any audio or video file for it.
 
 ### Main flows
 
@@ -243,13 +244,16 @@ start. The models load from the disk cache in a few minutes.
 
 ```bash
 uv sync                          # Python 3.12 + dev tools (no GPU packages)
-uv run pytest                    # ~70 tests, ~10 s
+uv run pytest                    # ~90 tests, under a minute
 uv run ruff check . && uv run ruff format --check .
 uv tool install pre-commit && pre-commit install   # no audio, ruff, gitleaks on every commit
 ```
 
 - **Real models locally:** `uv sync --extra gpu`, then `scripts/smoke_models.py` (works on CPU with the 0.6B voice
   model, slowly). Use the synthetic demo voice or your own recording only.
+- **Check a file for the watermark:** `uv run python scripts/check_watermark.py <files>` (needs `--extra gpu`;
+  reads any format ffmpeg can, including a video's audio track). `tests/test_watermark_audioseal.py` checks the
+  real watermark survives a resample; it runs only where the model packages are installed (not in CI).
 - **Run the app locally:** `STORAGE_PROVIDER=local DEVICE=cpu LLM_BASE_URL=<an OpenAI-compatible endpoint> uv run
   python -m voiceover_studio`, then open http://127.0.0.1:7860.
 - **Dependencies:** one `uv.lock` for everything. `qwen-tts` pins `transformers==4.57.3`, which caps
@@ -300,7 +304,7 @@ default loads its latest version unless you set one.
   re-deploy (26 minutes).
 - MP3 output isn't implemented (WAV, SRT and provenance only).
 - Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
-  `qwen-tts` 0.1.1 blocks. Firefox works.
+  `qwen-tts` 0.1.1 blocks. Firefox works, and so do Chrome 156 and Edge 157 (tested with a simulated microphone, 2026-11-08).
 - `scripts/bootstrap.sh` ran once against the real (hand-configured) account on 2026-11-08: it added the two
   missing pieces and, before the fix below, a duplicate operator policy. `--remove` and a fresh account are
   tested against a fake AWS CLI only.

@@ -30,6 +30,9 @@ These are part of the core code, not configuration switches:
 5. **Private by design.** No public endpoint: the UI is reached only through an encrypted AWS Session Manager tunnel.
 
 A watermark can be detected by anyone with the open detector, and a determined attacker may be able to weaken it.
+To check a file, audio or video: `uv run python scripts/check_watermark.py my-video.mp4` (after
+`uv sync --extra gpu`; it runs on a CPU). In a test on 2026-11-08, the mark survived mixing the voiceover under
+music and exporting it as an H.264/AAC MP4 (89 % of the audio still carried it).
 It helps, but it is not proof against misuse. Your judgement is the main safeguard.
 
 ## Tell your audience

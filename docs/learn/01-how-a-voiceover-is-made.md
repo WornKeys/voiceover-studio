@@ -142,10 +142,14 @@ flowchart LR
 3. **`tts.synthesize`** speaks each chunk in the cloned voice. `progress(i + 1, total, chunk)` updates the job.
 4. **`concat`** joins the clips with a 250-ms pause and records where each one starts and ends. Those timings
    become the caption times.
-5. **`normalize_loudness`** measures integrated loudness with `pyloudnorm` and scales the audio to −16 LUFS (the
-   usual target for online video), then keeps peaks below −1 dBFS.
-6. **`watermarker.embed`** adds an inaudible AudioSeal watermark carrying a fixed 16-bit message. It runs after
-   the loudness step, so nothing changes the audio after it's marked.
+5. **`normalize_loudness`** measures integrated loudness with `pyloudnorm` and scales the audio to −16 LUFS (a
+   common target for spoken word; YouTube plays loud uploads back at about −14 and only turns them down, so −16
+   leaves room for mixing the voice under music), then keeps peaks below −1 dBFS.
+6. **`watermarker.embed`** adds an inaudible AudioSeal watermark carrying a fixed 16-bit message (`0x5653`, "VS").
+   It runs after the loudness step, so nothing changes the audio after it's marked. AudioSeal works at 16 kHz and
+   doesn't resample for you, so the mark is computed on a 16 kHz copy and only the mark is resampled back to the
+   voice's 24 kHz; marking the 24 kHz audio directly gave a mark that vanished after any resample, which every
+   video export does. `scripts/check_watermark.py` reads it back from any audio or video file.
 7. **Files.** `write_wav` writes 16-bit PCM with a RIFF `INFO` chunk ("AI-generated voice…", the watermark id, the
    software version). `make_cues` turns the timings into SRT captions, wrapping text at 42 characters and two
    lines, and splitting a long sentence's time in proportion to its text. `provenance.json` records the label,
