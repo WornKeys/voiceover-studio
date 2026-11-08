@@ -96,6 +96,12 @@ flowchart TB
 | **Plugins** (`voiceover_studio/plugins/`) | Add *new* capabilities at a stage (`script`, `audio`, `output`). Settings are a pydantic model; the UI builds controls from its JSON schema. Guide: [plugins.md](plugins.md) |
 | **Entry points** | `api.py` (HTTP, validation, status codes), `ui.py` (Gradio), `__main__.py` (mounts the UI on the API app), `prefetch.py` (deploy-time model download) |
 
+**The UI is one guided page** (`ui.py`): three numbered steps (voice → script → generate). Each says what to do,
+collapses to a one-line summary when done ("✓ 1. Your voice: Recorded 8 Nov 2026, 11:42 UTC") and opens the
+next. Every field has a short explanation, and step 3 shows which voice and script will be used before
+generating. With a saved voice, step 1 starts done. The step handlers are plain functions, so
+`tests/test_ui.py` drives the whole flow without a browser (through `Blocks.fns`).
+
 **Guardrails live in the core**, so swapping a provider or adding a plugin can't bypass them:
 
 - No cloning without a consent record. Whisper transcribes the recording and it must match the sentence
