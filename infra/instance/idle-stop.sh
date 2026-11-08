@@ -13,7 +13,7 @@ limit=$(cat /opt/voiceover/idle-minutes 2>/dev/null || echo 30)
 ((limit > 0)) || exit 0 # 0 turns the idle stop off (the CloudWatch alarm still applies)
 
 # Recent flags only, so a crashed deploy or a forgotten keep-awake can't keep the GPU running for ever.
-[[ -n $(find /run/voiceover/updating -mmin -90 2>/dev/null) ]] && exit 0
+[[ -n $(find /run/voiceover/updating -mmin -180 2>/dev/null) ]] && exit 0
 [[ -n $(find /run/voiceover/keep-awake -mmin -480 2>/dev/null) ]] && exit 0
 
 uptime_minutes=$(($(cut -d. -f1 /proc/uptime) / 60))

@@ -36,7 +36,7 @@ See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 ```bash
 cp .env.example .env                       # set BUDGET_EMAIL
 aws login --profile voiceover-operator
-./scripts/deploy.sh                        # first time: 20-40 minutes
+./scripts/deploy.sh                        # first time: 30-60 minutes
 ./scripts/connect.sh                       # then open http://localhost:7860
 ./scripts/destroy.sh                       # when you're done: removes everything and checks
 ```

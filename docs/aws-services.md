@@ -63,3 +63,4 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 | Date | Change |
 |---|---|
 | 2026-11-08 | First version: services as built in `infra/terraform/` and the account setup. Dry run in progress |
+| 2026-11-08 | SSM Run Command: the install now runs as a background systemd service on the instance; Run Command only starts it and reads its log every 15 s (one long command hit its time limit in the dry run) |

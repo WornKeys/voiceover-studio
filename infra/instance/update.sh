@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Install or update the app on the instance. scripts/deploy.sh runs it through SSM (as root), after
-# extracting the release to /opt/voiceover/releases/<release>:
+# Install or update the app on the instance (as root). scripts/deploy.sh extracts the release to
+# /opt/voiceover/releases/<release> and starts this in the background with start-update.sh:
 #   update.sh <bucket> <release>
 # Steps: settings + secrets -> build the image -> download/load the models -> start -> wait until healthy.
-# Safe to re-run. Full log: /var/log/voiceover-update.log on the instance.
+# Safe to re-run. Log: /var/log/voiceover-update.log. Outcome ("<release> <exit code>"): /opt/voiceover/update-result
 set -euo pipefail
 
 BUCKET=$1
@@ -16,10 +16,17 @@ APP_UID=10001          # the user the app container runs as (see Dockerfile)
 exec > >(tee -a /var/log/voiceover-update.log) 2>&1
 step() { echo "==> $(date -u +%H:%M:%S) $*"; }
 
-# Pause the idle auto-stop while this runs (idle-stop.sh ignores the flag after 90 minutes).
+# Pause the idle auto-stop while this runs (idle-stop.sh ignores the flag after 3 hours), and record the
+# outcome for deploy.sh, which follows the log.
 mkdir -p /run/voiceover
 touch /run/voiceover/updating
-trap 'rm -f /run/voiceover/updating' EXIT
+finish() {
+  local rc=$?
+  rm -f /run/voiceover/updating
+  echo "$RELEASE $rc" >"$ROOT/update-result"
+  if ((rc != 0)); then echo "==> $(date -u +%H:%M:%S) Failed (exit code $rc)"; fi
+}
+trap finish EXIT
 
 # Read one KEY=value from the settings file (no `source`: values are data, not shell code).
 setting() { sed -n "s/^$1=//p" "$ROOT/app.env" | tail -n 1; }

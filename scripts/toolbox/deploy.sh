@@ -2,6 +2,7 @@
 # Create or update everything. Safe to re-run: it only changes what's different.
 #   1. preflight checks   2. infrastructure (Terraform, asks before changing anything)
 #   3. package this repo -> S3   4. on the instance: build, download models, start, health check
+#      (runs in the background there; this script follows its log)
 # shellcheck source=scripts/toolbox/lib.sh
 source scripts/toolbox/lib.sh
 
@@ -12,20 +13,42 @@ Usage: ./scripts/deploy.sh [options]
   --infra-only        only run Terraform (don't update the app)
   --replace-instance  create a new instance (newest AMI, or after changing AVAILABILITY_ZONE).
                       The bucket (voices, outputs) is kept; models are downloaded again.
+  --follow            only follow an install that's already running on the instance
+                      (after Ctrl+C or an expired AWS session)
 EOF
   exit 0
 }
 
-yes=false infra_only=false replace=false
+yes=false infra_only=false replace=false follow=false
 for arg in "$@"; do
   case "$arg" in
     --yes | -y) yes=true ;;
     --infra-only) infra_only=true ;;
     --replace-instance) replace=true ;;
+    --follow) follow=true ;;
     -h | --help) usage ;;
     *) die "Unknown option: $arg (see --help)" ;;
   esac
 done
+
+finish_install() {
+  if follow_update "$1"; then
+    say "Deployed. Open the studio with: ./scripts/connect.sh"
+    note "The instance stops by itself after ${IDLE_STOP_MINUTES:-30} idle minutes. Stop it now: ./scripts/stop.sh"
+  else
+    die "The install failed (log above; full log on the instance: /var/log/voiceover-update.log).
+       Fix the cause, then run ./scripts/deploy.sh again."
+  fi
+}
+
+if $follow; then
+  load_env
+  tf_init
+  id=$(instance_id)
+  say "Following the install on the instance (Ctrl+C stops watching, not the install)"
+  finish_install "$id"
+  exit 0
+fi
 
 bash scripts/toolbox/preflight.sh
 load_env
@@ -86,15 +109,16 @@ aws s3 cp --only-show-errors build/app.env "s3://$bucket/deploy/$release/app.env
 # --- 4. install on the instance --------------------------------------------------------------------------
 ensure_running "$id"
 wait_ssm "$id"
-say "Installing on the instance (first time: about 20 to 40 minutes; then a few minutes)"
+say "Starting the install on the instance"
 remote="set -euo pipefail
 export AWS_DEFAULT_REGION=$AWS_REGION
 dir=/opt/voiceover/releases/$release
 mkdir -p \"\$dir\"
 aws s3 cp --only-show-errors s3://$bucket/deploy/$release/app.tar.gz - | tar -xz -C \"\$dir\"
-bash \"\$dir/infra/instance/update.sh\" $bucket $release"
-run_remote "$id" 3600 "$remote" ||
-  die "The update failed (output above). Full log on the instance: /var/log/voiceover-update.log"
+bash \"\$dir/infra/instance/start-update.sh\" $bucket $release"
+run_remote "$id" 600 "$remote" ||
+  die "Couldn't start the install (output above). If one is already running: ./scripts/deploy.sh --follow"
 
-say "Deployed. Open the studio with: ./scripts/connect.sh"
-note "The instance stops by itself after ${IDLE_STOP_MINUTES:-30} idle minutes. Stop it now: ./scripts/stop.sh"
+say "Installing (first time: 30 to 60 minutes, about 25 GB of downloads; later: a few minutes)"
+note "Ctrl+C stops watching, not the install. Pick it up again with: ./scripts/deploy.sh --follow"
+finish_install "$id"

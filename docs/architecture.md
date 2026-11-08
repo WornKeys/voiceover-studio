@@ -173,16 +173,29 @@ sequenceDiagram
   TB->>TB: tar the working copy (git ls-files, .gitignore respected) + app.env
   TB->>AWS: upload to s3://bucket/deploy/<release>/
   TB->>AWS: start instance if stopped, wait for SSM
-  TB->>EC2: Run Command: download, extract, bash update.sh
+  TB->>EC2: Run Command: download, extract, start-update.sh
+  EC2->>EC2: systemd-run voiceover-update → update.sh (background)
+  EC2-->>TB: "Install started" (seconds)
   EC2->>EC2: app.env, HF token → secrets.env (root only)
   EC2->>EC2: docker compose build → prefetch models → up --wait
-  EC2-->>TB: output + exit code
+  loop every 15 s until the service ends
+    TB->>EC2: Run Command: new log lines + state
+    EC2-->>TB: lines (shown to you)
+  end
+  EC2->>EC2: update-result = "<release> <exit code>"
   TB-->>You: "Deployed. ./scripts/connect.sh"
 ```
 
+**Why in the background:** a first install takes 30 to 60 minutes. Holding one SSM command open that long hits
+its time limit, and it can outlive the deploy role's 1-hour session. So `start-update.sh` runs `update.sh` as a
+transient systemd service (`voiceover-update`) and returns at once. `deploy.sh` then follows the log with short
+commands (`follow_update`), and reads the outcome from `/opt/voiceover/update-result`. Ctrl+C or an expired
+session only stops the watching: `./scripts/deploy.sh --follow` picks it up again. A second install can't start
+while one is running.
+
 On the instance (`/opt/voiceover/`): `releases/<release>/` (the last two kept), `current` (symlink), `app.env`,
 `secrets.env`, `cache/app` (voice/ASR/watermark models), `cache/llm` (LLM weights), `bin/idle-stop.sh`,
-`idle-minutes`. Install log: `/var/log/voiceover-update.log`.
+`idle-minutes`, `update-log-start`, `update-result`. Install log: `/var/log/voiceover-update.log`.
 
 Remote commands run through `run_remote` (`scripts/toolbox/lib.sh`). AWS runs them with `/bin/sh` (dash), so the
 command is written to a temporary file and run with bash.
@@ -211,7 +224,7 @@ start. The models load from the disk cache in a few minutes.
 | `Dockerfile`, `.dockerignore` | App image (python:3.12-slim, ffmpeg, `uv sync --extra gpu`) |
 | `docker/compose.yaml`, `docker/compose.cpu.yaml` | The two containers; the CPU override removes the GPU reservation |
 | `infra/terraform/` | AWS resources (section 5) |
-| `infra/instance/` | `update.sh`, `idle-stop.sh` and its systemd units |
+| `infra/instance/` | `start-update.sh` (starts the install in the background), `update.sh`, `idle-stop.sh` and its systemd units |
 | `scripts/*.sh` | Host commands: deploy, connect, start, stop, status, secret, preflight, destroy |
 | `scripts/lib/host.sh` | Credentials + runs the toolbox (also handles Git Bash path conversion) |
 | `scripts/toolbox/` | The real logic, run inside the toolbox (bash 5, pinned tools) |

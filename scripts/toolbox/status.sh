@@ -16,6 +16,7 @@ run_remote "$id" 60 "set +e
 echo \"App health:   \$(curl -fsS --max-time 5 http://127.0.0.1:7860/api/health || echo 'not answering')\"
 echo \"Activity:     \$(curl -fsS --max-time 5 http://127.0.0.1:7860/api/activity || echo '-')\"
 echo \"Idle stop:    after \$(cat /opt/voiceover/idle-minutes 2>/dev/null || echo '?') idle minutes\"
+echo \"Install:      \$(systemctl is-active voiceover-update 2>/dev/null) (last result: \$(cat /opt/voiceover/update-result 2>/dev/null || echo none); release exit code)\"
 command -v nvidia-smi >/dev/null && echo \"GPU memory:   \$(nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader)\"
 docker ps --format '{{.Names}}: {{.Status}}' 2>/dev/null
 echo 'Last deploy log lines:'

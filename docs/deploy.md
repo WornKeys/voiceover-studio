@@ -48,8 +48,10 @@ aws login --profile voiceover-operator
 ./scripts/connect.sh          # opens the tunnel: browse to http://localhost:7860
 ```
 
-The first deploy takes **20 to 40 minutes**: Terraform (~3 min), building the app image (~5 GB of Python
-packages), then downloading the models (voice ~4 GB, script writer ~9 GB). Later deploys take a few minutes.
+The first deploy takes **30 to 60 minutes**: Terraform (~3 min), building the app image (~5 GB of Python
+packages), the vLLM image (~10 GB), then the models (voice ~4 GB, script writer ~9 GB). Later deploys take a
+few minutes. The install runs in the background on the instance and `deploy.sh` shows its log as it goes. Ctrl+C
+only stops the watching; `./scripts/deploy.sh --follow` picks it up again.
 
 `deploy.sh` is safe to re-run: it updates only what changed, and always ships your current working copy
 (including uncommitted changes; `.env`, recordings and anything else in `.gitignore` are never included).
@@ -119,7 +121,8 @@ carries the tag `project=voiceover-studio`, so **Resource Groups > Tag Editor** 
 | `AccessDenied` from Terraform | The deploy role doesn't allow that action. That's the guardrails working: check what you changed |
 | Deploy fails on the instance | The output shows the failing step. Full log: `/var/log/voiceover-update.log` (`aws ssm start-session --target <instance-id>` as the deploy role), or CloudWatch log group `/voiceover-studio/app` |
 | The app says the voice model is out of memory | Lower `LLM_GPU_MEMORY` (e.g. 0.45) and `LLM_MAX_MODEL_LEN`, then deploy |
-| Your AWS session expired during a long deploy | The update keeps running on the instance. Check with `./scripts/status.sh` |
+| Your AWS session expired during a long deploy | The install keeps running on the instance. Sign in again and run `./scripts/deploy.sh --follow` |
+| `An install is already running on the instance` | Follow it: `./scripts/deploy.sh --follow` |
 | Docker on Windows: "the input device is not a TTY" | Use Git Bash (the scripts use `winpty` there) or WSL |
 
 ## How it fits together
