@@ -1,0 +1,23 @@
+# Weekly update proposals (pull requests). Security alerts for the same dependencies are on as well.
+# Python updates are grouped into one pull request; the voice model's library (qwen-tts) pins several packages,
+# so most will wait for a new qwen-tts release, which also shows up here.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      python:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]

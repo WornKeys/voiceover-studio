@@ -1,0 +1,38 @@
+# Known vulnerabilities we've reviewed and accepted for now (read by OSV-Scanner in .github/workflows/security.yml).
+#
+# Each entry covers ONE package at ONE version: upgrading the package makes the entry stop applying, so new
+# findings show up again. Each also expires (effectiveUntil), which forces a fresh review even if nothing changed.
+#
+# Why all three are stuck: qwen-tts 0.1.1 (the voice model's library, the newest release) pins
+# transformers==4.57.3 and accelerate==1.12.0; that transformers needs huggingface-hub < 1, which holds gradio at
+# 6.17.3, which holds pillow below 13. A newer qwen-tts unblocks all three: Dependabot proposes it when it ships.
+# Summary for readers: SECURITY.md, "Known findings".
+
+[[PackageOverrides]]
+name = "pillow"
+version = "12.3.0"
+ecosystem = "PyPI"
+effectiveUntil = 2027-02-08
+vulnerability.ignore = true
+reason = """41 advisories, all in decoding or writing image files (TIFF, PDF, GIF, EPS, JPEG...). The studio never \
+opens images: it takes audio only, and only from its single user through the private tunnel. Gradio depends on \
+Pillow for image components the UI doesn't use. Fixed in 13.0.0, blocked by gradio 6.17.3 (see above)."""
+
+[[PackageOverrides]]
+name = "transformers"
+version = "4.57.3"
+ecosystem = "PyPI"
+effectiveUntil = 2027-02-08
+vulnerability.ignore = true
+reason = """Advisories about loading untrusted models or code (remote code, custom generation code, LightGlue), \
+the Trainer class and save_pretrained. The app loads only named models pinned to tested commits \
+(settings.PINNED_REVISIONS), never trains and never saves models. Pinned exactly by qwen-tts 0.1.1."""
+
+[[PackageOverrides]]
+name = "accelerate"
+version = "1.12.0"
+ecosystem = "PyPI"
+effectiveUntil = 2027-02-08
+vulnerability.ignore = true
+reason = """Path traversal / denial of service when loading a malicious sharded checkpoint. The app loads only \
+the pinned, tested model commits. Pinned exactly by qwen-tts 0.1.1."""

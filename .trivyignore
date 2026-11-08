@@ -1,0 +1,21 @@
+# Infrastructure findings reviewed and accepted (read by Trivy in .github/workflows/security.yml).
+# Each is a deliberate choice; the reasoning is also in SECURITY.md ("Known findings") and docs/learn/03-terraform.md.
+
+# Security group allows outbound 443 and 80 to any address (infra/terraform/network.tf).
+# The instance downloads models (Hugging Face), packages (PyPI, Debian) and images (Docker Hub), none of which have
+# fixed addresses; a filtering proxy or VPC endpoints would cost $30+/month (and the guardrails deny them). Port 80
+# serves the OS package mirrors, including Ubuntu's security updates for the host. There are no INBOUND rules at all.
+AWS-0104
+
+# S3 bucket without versioning (infra/terraform/storage.tf). On purpose: deleting a voice in the app must really
+# delete the recording, not keep an old version (voice samples are biometric-like data).
+AWS-0090
+
+# S3 encrypted with S3-managed keys (SSE-S3), not a customer-managed KMS key (infra/terraform/storage.tf).
+# Still encrypted at rest; a KMS key costs money and adds key management that a single-user tool doesn't need.
+AWS-0132
+
+# The deploy toolbox image runs as root (toolbox/Dockerfile). It's a short-lived local container that only mounts
+# the repo; on Linux the scripts run it as your own user (--user). A fixed non-root user can break file access on
+# Docker Desktop bind mounts (Windows, macOS).
+DS-0002

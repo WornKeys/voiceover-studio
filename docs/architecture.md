@@ -261,12 +261,15 @@ uv tool install pre-commit && pre-commit install   # no audio, ruff, gitleaks on
   or the deploy role will refuse. New AWS actions need the account policies updated too. Record new services in
   [aws-services.md](aws-services.md).
 
-### CI (`.github/workflows/ci.yml`)
+### CI (`.github/workflows/ci.yml` and `security.yml`)
 
 | Job | Checks |
 |---|---|
 | `checks` | ruff, pytest, no audio files in the whole history, gitleaks over the whole history |
 | `infra` | `terraform fmt` + `validate`, shellcheck on every script, `docker compose config`, toolbox image build |
+| `security` (also weekly) | CodeQL on the Python code and the workflows; OSV-Scanner on `uv.lock` (fails on unreviewed vulnerabilities); Trivy on Terraform, Dockerfiles and Compose (fails on unreviewed high/critical). Reviewed findings: `osv-scanner.toml`, `.trivyignore`, explained in `SECURITY.md` |
+
+Dependabot (`.github/dependabot.yml`) proposes weekly updates for the Python packages and the GitHub Actions.
 
 ### Conventions
 
