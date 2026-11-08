@@ -133,10 +133,21 @@ wait_ssm() {
        (Actions > Monitor > Get system log)."
 }
 
-# Run a shell command on the instance as root (SSM Run Command) and print its output.
+# Run a bash command on the instance as root (SSM Run Command) and print its output.
 # Returns the command's success. Usage: run_remote <instance-id> <timeout-seconds> <command> [quiet]
 run_remote() {
   local id=$1 timeout=$2 cmd=$3 quiet=${4:-} params cid status err minute last=-1
+  # AWS-RunShellScript runs the lines with /bin/sh (dash on Ubuntu: no pipefail), so the command is written
+  # to a file (quoted heredoc: passed through unchanged) and run with bash, stdin closed.
+  [[ "$cmd" != *VOICEOVER_REMOTE_EOF* ]] || die "run_remote: the command contains the heredoc marker."
+  cmd="f=\$(mktemp)
+cat >\"\$f\" <<'VOICEOVER_REMOTE_EOF'
+$cmd
+VOICEOVER_REMOTE_EOF
+bash \"\$f\" </dev/null
+rc=\$?
+rm -f \"\$f\"
+exit \$rc"
   params=$(jq -n --arg c "$cmd" --arg t "$timeout" '{commands: [$c], executionTimeout: [$t]}')
   cid=$(aws ssm send-command --instance-ids "$id" --document-name AWS-RunShellScript \
     --comment voiceover-studio --parameters "$params" --query Command.CommandId --output text)
