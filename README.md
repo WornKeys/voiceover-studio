@@ -75,10 +75,9 @@ uv sync --extra gpu          # optional: the real models (Linux + NVIDIA GPU; CP
 
 ## How this was built
 
-Built by Shailendra Karambe with [Claude Code](https://claude.com/claude-code) as an AI pair programmer.
-I designed the system and its guardrails, made the decisions and tested everything on a real AWS account;
-Claude Code wrote much of the code and documentation under my direction and review. Commits it helped with
-carry a `Co-Authored-By` line.
+I built this with [Claude Code](https://claude.com/claude-code) as an AI pair programmer. I designed the system
+and its guardrails, made the decisions and tested everything on a real AWS account; Claude Code wrote much of the
+code and documentation under my direction and review. Commits it helped with carry a `Co-Authored-By` line.
 
 ## License
 
