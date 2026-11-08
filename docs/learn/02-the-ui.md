@@ -49,7 +49,9 @@ follow one pattern: try the action, and on a known error return a plain-language
 ```python
 def write_script(description, audience, tone, seconds, language):
     try:
-        draft = services.draft_script(ScriptRequest(description or "", float(seconds), audience, tone, language))
+        draft = services.draft_script(
+            ScriptRequest(description or "", float(seconds), audience, tone, language)
+        )
     except (ScriptRefusedError, ValueError) as exc:
         return gr.update(), f"**Not written.** {exc}"
     return draft.text, "Draft written. Edit it below, or try the optional tools."
@@ -122,6 +124,7 @@ a script, move on, generate) in about a second:
 ```python
 def handler(ui: gr.Blocks, name: str):
     return next(f.fn for f in ui.fns.values() if f.fn and f.fn.__name__ == name)
+
 
 hint, step1, step2 = handler(ui, "choose_voice")(voice_id)
 assert step1["label"].startswith("✓ 1. Your voice: Recorded ") and step2["open"] is True

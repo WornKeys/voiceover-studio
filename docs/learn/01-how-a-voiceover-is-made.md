@@ -19,7 +19,7 @@ voiceover_studio`). It does three things:
 
 ```python
 services = Services(Settings.from_env(), load_config())
-app = create_app(services)                      # the HTTP API under /api
+app = create_app(services)  # the HTTP API under /api
 return gr.mount_gradio_app(app, build_ui(services), path="/", theme=THEME, css=CSS)
 ```
 
