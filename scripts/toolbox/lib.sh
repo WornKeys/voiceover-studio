@@ -94,6 +94,59 @@ tf_init() { tf init -input=false >/dev/null || die "terraform init failed (see a
 tf_out() { tf output -raw "$1" 2>/dev/null; }
 deployed() { [[ -n "$(tf state list 2>/dev/null)" ]]; }
 
+# Run a "describe" call: succeeds if the resource exists, fails only if AWS clearly says it's not found.
+# Any other error (permissions, expired session) counts as "exists", so a real leftover is never hidden.
+probe() {
+  local err
+  err=$("$@" 2>&1 >/dev/null) && return 0
+  case "$err" in
+    *NotFound* | *NoSuchEntity* | *"(404)"* | *"Not Found"*) return 1 ;;
+    *)
+      warn "Couldn't check ($err)"
+      return 0
+      ;;
+  esac
+}
+
+# Is a resource that the tagging index lists really still there? The index lags behind deletions (sometimes
+# for hours), so each resource is checked with its own service. Unknown types count as existing.
+still_exists() {
+  local arn=$1 id=${1##*/} found
+  case "$arn" in
+    *:ec2:*:instance/*)
+      # Terminated instances show as "terminated" for about an hour, then come back empty or "not found".
+      if ! found=$(aws ec2 describe-instances --instance-ids "$id" \
+        --query 'Reservations[0].Instances[0].State.Name' --output text 2>&1); then
+        [[ "$found" == *NotFound* ]] && return 1
+        warn "Couldn't check ($found)"
+        return 0
+      fi
+      [[ "$found" != None && "$found" != terminated && "$found" != shutting-down ]]
+      ;;
+    *:ec2:*:volume/*) probe aws ec2 describe-volumes --volume-ids "$id" ;;
+    *:ec2:*:security-group/*) probe aws ec2 describe-security-groups --group-ids "$id" ;;
+    *:ec2:*:snapshot/*) probe aws ec2 describe-snapshots --snapshot-ids "$id" ;;
+    *:ec2:*:image/*)
+      found=$(aws ec2 describe-images --image-ids "$id" --query 'length(Images)' --output text 2>/dev/null || echo 0)
+      [[ "$found" != 0 ]]
+      ;;
+    arn:aws*:s3:::*) probe aws s3api head-bucket --bucket "${arn##*:::}" ;;
+    *:logs:*:log-group:*)
+      id=${arn#*:log-group:}
+      id=${id%:\*}
+      found=$(aws logs describe-log-groups --log-group-name-prefix "$id" \
+        --query "length(logGroups[?logGroupName=='$id'])" --output text)
+      [[ "$found" != 0 ]]
+      ;;
+    *:cloudwatch:*:alarm:*)
+      found=$(aws cloudwatch describe-alarms --alarm-names "${arn##*:alarm:}" --query 'length(MetricAlarms)' \
+        --output text)
+      [[ "$found" != 0 ]]
+      ;;
+    *) return 0 ;;
+  esac
+}
+
 instance_id() {
   local id
   id=$(tf_out instance_id) || true

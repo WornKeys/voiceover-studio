@@ -111,7 +111,9 @@ instance is on, which is why it stops itself when idle.
 
 1. Offers to download your voices and outputs to `backups/` first (skip with `--no-keep-outputs`).
 2. Deletes the instance, disk, bucket, logs, alarm, budget, instance role and every `/voiceover-studio/` secret.
-3. Checks that nothing tagged `project=voiceover-studio` is left, and fails loudly if something is.
+3. Checks that nothing tagged `project=voiceover-studio` is left, and fails loudly if something is. AWS's tag
+   index keeps listing deleted resources for a while (even hours), so each one it lists is confirmed with its own
+   service first: EC2 for instances and disks, S3 for the bucket, and so on.
 
 Kept: your AWS account, its one-time setup and the GPU quota (none of them cost anything). Add `--purge-local` to
 also remove the local Terraform state and the toolbox image. Check **Billing > Bills** the next day.

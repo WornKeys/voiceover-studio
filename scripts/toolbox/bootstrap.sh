@@ -81,10 +81,8 @@ if $remove; then
   left=$(aws resourcegroupstaggingapi get-resources --tag-filters Key=project,Values=voiceover-studio \
     --query 'ResourceTagMappingList[].ResourceARN' --output text)
   for item in $left; do
-    if [[ "$item" == *:instance/* ]]; then
-      state=$(instance_state "${item##*/}" 2>/dev/null || echo terminated)
-      [[ "$state" == terminated || "$state" == shutting-down ]] && continue
-    fi
+    # The tagging index lags behind deletions: confirm with the resource's own service (lib.sh).
+    still_exists "$item" || continue
     die "Project resources still exist ($item). Run ./scripts/destroy.sh first."
   done
   ok "Nothing tagged project=voiceover-studio is left"

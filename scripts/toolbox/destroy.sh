@@ -64,15 +64,19 @@ done
 
 say "Verifying that nothing is left"
 leftovers=()
-for attempt in 1 2 3; do # the tagging index can lag behind deletions by a minute or two
+stale=0
+for attempt in 1 2 3; do # a deletion can take a minute to show
   leftovers=()
+  stale=0
+  # The tagging index finds everything with the project tag, but it lags behind deletions (sometimes for
+  # hours), so each listed resource is confirmed with its own service before it counts as left over.
   for arn in $(aws resourcegroupstaggingapi get-resources --tag-filters Key=project,Values=voiceover-studio \
     --query 'ResourceTagMappingList[].ResourceARN' --output text); do
-    if [[ "$arn" == *:instance/* ]]; then
-      state=$(instance_state "${arn##*/}" 2>/dev/null || echo terminated)
-      [[ "$state" == terminated || "$state" == shutting-down ]] && continue
+    if still_exists "$arn"; then
+      leftovers+=("$arn")
+    else
+      stale=$((stale + 1))
     fi
-    leftovers+=("$arn")
   done
   # IAM roles and budgets aren't in the tagging index: check them by name.
   if aws iam get-role --role-name voiceover-studio-instance >/dev/null 2>&1; then
@@ -90,6 +94,10 @@ if ((${#leftovers[@]} > 0)); then
   warn "These still exist:"
   printf '    %s\n' "${leftovers[@]}"
   die "Not everything was removed. Delete these in the console (docs/deploy.md, 'Manual clean-up')."
+fi
+
+if ((stale > 0)); then
+  note "($stale already-deleted resource(s) still appear in AWS's tag index for a while; checked, they're gone.)"
 fi
 
 if $purge; then
