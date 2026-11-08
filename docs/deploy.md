@@ -54,7 +54,7 @@ aws login --profile voiceover-operator
 ./scripts/connect.sh          # opens the tunnel: browse to http://localhost:7860
 ```
 
-The first deploy takes **30 to 60 minutes**: Terraform (~3 min), building the app image (~5 GB of Python
+The first deploy takes **about 25 minutes** (measured: 26), up to an hour on a slow day: Terraform (~3 min), building the app image (~5 GB of Python
 packages), the vLLM image (~10 GB), then the models (voice ~4 GB, script writer ~9 GB). Later deploys take a
 few minutes. The install runs in the background on the instance and `deploy.sh` shows its log as it goes. Ctrl+C
 only stops the watching; `./scripts/deploy.sh --follow` picks it up again.
@@ -96,7 +96,7 @@ it would be ≈ $600; that's what the auto-stop, the alarm and the budget emails
 
 | What | Time | Cost |
 |---|---|---|
-| First deploy (image build + ~25 GB of downloads) | ≈ 40 minutes | ≈ $0.55 |
+| First deploy on a fresh instance (image build + ~25 GB of downloads) | 26 minutes | ≈ $0.35 |
 | A 66-second voiceover (about 165 words) | under 1 minute, faster than real time | ≈ $0.01 |
 | GPU memory with both models loaded | 15.8 of 23 GB | |
 

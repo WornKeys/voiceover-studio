@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start update.sh in the background, as a transient systemd service (voiceover-update), and return at once.
-# A first install takes 30-60 minutes, longer than an SSM command or the deploy role's 1-hour session should
-# be held open. scripts/deploy.sh follows /var/log/voiceover-update.log with short SSM commands instead and
+# A first install takes about 25 minutes, sometimes close to an hour: too long to hold one SSM command open, and it
+# could outlive the deploy role's 1-hour session. scripts/deploy.sh follows /var/log/voiceover-update.log with short SSM commands instead and
 # reads the outcome from /opt/voiceover/update-result. Run by deploy.sh through SSM (as root):
 #   start-update.sh <bucket> <release>
 set -euo pipefail

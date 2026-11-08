@@ -37,7 +37,7 @@ See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 cp .env.example .env                       # set BUDGET_EMAIL
 ./scripts/bootstrap.sh --profile <admin>   # once per AWS account: guardrails, deploy role, GPU quota
 aws login --profile voiceover-operator
-./scripts/deploy.sh                        # first time: 30-60 minutes
+./scripts/deploy.sh                        # first time: about 25 minutes
 ./scripts/connect.sh                       # then open http://localhost:7860
 ./scripts/destroy.sh                       # when you're done: removes everything and checks
 ```

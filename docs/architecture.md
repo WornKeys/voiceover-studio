@@ -192,7 +192,7 @@ sequenceDiagram
   TB-->>You: "Deployed. ./scripts/connect.sh"
 ```
 
-**Why in the background:** a first install takes 30 to 60 minutes. Holding one SSM command open that long hits
+**Why in the background:** a first install takes about 25 minutes (up to an hour on a slow day). Holding one SSM command open that long hits
 its time limit, and it can outlive the deploy role's 1-hour session. So `start-update.sh` runs `update.sh` as a
 transient systemd service (`voiceover-update`) and returns at once. `deploy.sh` then follows the log with short
 commands (`follow_update`), and reads the outcome from `/opt/voiceover/update-result`. Ctrl+C or an expired

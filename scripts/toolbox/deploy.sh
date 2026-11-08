@@ -120,6 +120,6 @@ bash \"\$dir/infra/instance/start-update.sh\" $bucket $release"
 run_remote "$id" 600 "$remote" ||
   die "Couldn't start the install (output above). If one is already running: ./scripts/deploy.sh --follow"
 
-say "Installing (first time: 30 to 60 minutes, about 25 GB of downloads; later: a few minutes)"
+say "Installing (first time: about 25 minutes and 25 GB of downloads; later: a few minutes)"
 note "Ctrl+C stops watching, not the install. Pick it up again with: ./scripts/deploy.sh --follow"
 finish_install "$id"
