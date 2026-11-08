@@ -121,9 +121,9 @@ ensure_running() {
 }
 
 wait_ssm() {
-  local id=$1 status i
+  local id=$1 status
   say "Waiting for the instance to connect to Session Manager"
-  for i in $(seq 1 60); do
+  for _ in $(seq 1 60); do
     status=$(aws ssm describe-instance-information --filters "Key=InstanceIds,Values=$id" \
       --query 'InstanceInformationList[0].PingStatus' --output text 2>/dev/null || true)
     [[ "$status" == Online ]] && return 0
