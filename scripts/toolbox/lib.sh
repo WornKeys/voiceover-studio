@@ -4,7 +4,9 @@ set -euo pipefail
 cd /work
 
 TF_DIR=infra/terraform
-DEFAULT_LLM_MODEL=cyankiwi/Qwen3.5-9B-AWQ-4bit # keep in step with voiceover_studio/settings.py
+# Keep in step with voiceover_studio/settings.py (the default model and PINNED_REVISIONS).
+DEFAULT_LLM_MODEL=cyankiwi/Qwen3.5-9B-AWQ-4bit
+DEFAULT_LLM_REVISION=e4d2d39cede8c5d1716d824cd843e2889c648083 # tested 2026-11-08
 
 say() { printf '\033[1m==> %s\033[0m\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
@@ -44,6 +46,12 @@ load_env() {
   unset AWS_PROFILE # inside the toolbox, credentials come from the environment
   export LLM_BASE_URL=${LLM_BASE_URL:-http://llm:8000/v1}
   export LLM_MODEL=${LLM_MODEL:-$DEFAULT_LLM_MODEL}
+  # The tested version for the default model; "main" (the latest) for any other model unless you set one.
+  if [[ -z "${LLM_MODEL_REVISION:-}" ]]; then
+    LLM_MODEL_REVISION=main
+    [[ "$LLM_MODEL" == "$DEFAULT_LLM_MODEL" ]] && LLM_MODEL_REVISION=$DEFAULT_LLM_REVISION
+  fi
+  export LLM_MODEL_REVISION
   export COMPUTE_PROFILE
   COMPUTE_PROFILE=$(resolve_profile)
   local default_type=g6.xlarge

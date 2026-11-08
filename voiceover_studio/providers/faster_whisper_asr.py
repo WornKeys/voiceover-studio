@@ -31,8 +31,15 @@ def to_whisper_samples(audio_path: Path) -> np.ndarray:
 
 @register("asr", "faster_whisper")
 class FasterWhisperASR(ASRProvider):
-    def __init__(self, model: str = "small", device: str = "cuda", compute_type: str = "float16"):
+    def __init__(
+        self,
+        model: str = "small",
+        device: str = "cuda",
+        compute_type: str = "float16",
+        revision: str | None = None,  # a Hugging Face commit; None = the latest
+    ):
         self.model_id = model
+        self.revision = revision
         self.device = device
         self.compute_type = compute_type
         self._model = None
@@ -41,7 +48,9 @@ class FasterWhisperASR(ASRProvider):
         if self._model is None:
             from faster_whisper import WhisperModel
 
-            self._model = WhisperModel(self.model_id, device=self.device, compute_type=self.compute_type)
+            self._model = WhisperModel(
+                self.model_id, device=self.device, compute_type=self.compute_type, revision=self.revision
+            )
         return self._model
 
     def transcribe(self, audio_path: Path, language: str | None = None) -> str:

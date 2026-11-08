@@ -12,7 +12,14 @@ from voiceover_studio.providers import registry
 from voiceover_studio.providers.base import AudioClip, ChatMessage, VoiceReference
 from voiceover_studio.providers.openai_compat import OpenAICompatLLM, infer_auth, is_local
 from voiceover_studio.providers.storage import LocalStorage, S3Storage
-from voiceover_studio.settings import Settings, build_llm, build_storage
+from voiceover_studio.settings import (
+    PINNED_REVISIONS,
+    Settings,
+    build_asr,
+    build_llm,
+    build_storage,
+    build_tts,
+)
 
 # --- LLM -------------------------------------------------------------------
 
@@ -120,13 +127,22 @@ def test_qwen3_tts_maps_language_and_passes_reference_transcript(monkeypatch):
             calls["generate"] = kwargs
             return [np.zeros(2400, dtype=np.float32)], 24000
 
+    def fake_snapshot_download(repo_id, revision=None):  # no 4 GB download in a unit test
+        calls["download"] = (repo_id, revision)
+        return f"/cache/{repo_id}@{revision}"
+
     monkeypatch.setitem(sys.modules, "torch", types.SimpleNamespace(bfloat16="bf16"))
     monkeypatch.setitem(sys.modules, "qwen_tts", types.SimpleNamespace(Qwen3TTSModel=FakeModel))
-    tts = registry.create("tts", "qwen3_tts", device="cpu")
+    monkeypatch.setitem(
+        sys.modules, "huggingface_hub", types.SimpleNamespace(snapshot_download=fake_snapshot_download)
+    )
+    tts = registry.create("tts", "qwen3_tts", device="cpu", revision="abc123")
     clip = tts.synthesize("Hello.", VoiceReference(Path("v.wav"), "I am recording my own voice.", "c1"), "en")
     assert calls["generate"]["language"] == "English"
     assert calls["generate"]["ref_text"] == "I am recording my own voice."
-    assert calls["load"][1] == "sdpa"
+    # The whole repo is fetched at the pinned commit, then loaded from that folder (model + processor match).
+    assert calls["download"] == ("Qwen/Qwen3-TTS-12Hz-1.7B-Base", "abc123")
+    assert calls["load"] == ("/cache/Qwen/Qwen3-TTS-12Hz-1.7B-Base@abc123", "sdpa")
     assert clip.sample_rate == 24000 and abs(clip.seconds - 0.1) < 1e-6
     with pytest.raises(ValueError, match="doesn't support"):
         tts.synthesize("Namaste.", VoiceReference(Path("v.wav"), "t", "c1"), "hi")
@@ -136,8 +152,8 @@ def test_faster_whisper_gets_16k_samples_not_a_file_path(monkeypatch, tmp_path):
     received = {}
 
     class FakeWhisper:
-        def __init__(self, model, device, compute_type):
-            self.args = (model, device, compute_type)
+        def __init__(self, model, device, compute_type, revision=None):
+            received["load"] = (model, device, compute_type, revision)
 
         def transcribe(self, audio, language, beam_size):
             received["audio"] = audio
@@ -147,9 +163,12 @@ def test_faster_whisper_gets_16k_samples_not_a_file_path(monkeypatch, tmp_path):
 
     monkeypatch.setitem(sys.modules, "faster_whisper", types.SimpleNamespace(WhisperModel=FakeWhisper))
     wav = write_wav(AudioClip(np.zeros(24000, dtype=np.float32), 24000), tmp_path / "sample.wav")
-    asr = registry.create("asr", "faster_whisper", model="small", device="cpu", compute_type="int8")
+    asr = registry.create(
+        "asr", "faster_whisper", model="small", device="cpu", compute_type="int8", revision="abc123"
+    )
     assert asr.transcribe(wav, "en") == "I am recording my voice."
     assert isinstance(received["audio"], np.ndarray) and len(received["audio"]) == 16000  # 1 s at 16 kHz
+    assert received["load"] == ("small", "cpu", "int8", "abc123")
 
 
 # --- Settings ---------------------------------------------------------------
@@ -176,3 +195,21 @@ def test_settings_from_env_and_derived_values(tmp_path):
 def test_registry_lists_builtin_providers():
     assert "qwen3_tts" in registry.available("tts")
     assert {"local", "s3"} <= set(registry.available("storage"))
+
+
+def test_default_models_load_the_tested_versions():
+    s = Settings()
+    assert build_tts(s).revision == PINNED_REVISIONS[s.tts_model]
+    assert build_asr(s).revision == PINNED_REVISIONS["small"]
+    assert PINNED_REVISIONS[s.llm_model]  # vLLM gets it through scripts/toolbox/lib.sh
+    # Your own revision wins; another model has no pin, so it loads the latest unless you set one.
+    assert build_tts(Settings(tts_model_revision="abc123")).revision == "abc123"
+    assert build_asr(Settings(asr_model="medium")).revision is None
+    assert build_tts(Settings.from_env({"TTS_MODEL_REVISION": "v2"})).revision == "v2"
+
+
+def test_llm_pin_is_the_same_in_the_deploy_scripts():
+    lib = (Path(__file__).parents[1] / "scripts" / "toolbox" / "lib.sh").read_text(encoding="utf-8")
+    llm = Settings().llm_model
+    assert f"DEFAULT_LLM_MODEL={llm}" in lib
+    assert f"DEFAULT_LLM_REVISION={PINNED_REVISIONS[llm]}" in lib

@@ -86,6 +86,17 @@ us-east-1 on-demand prices; check current prices for your region.
 A one-time try (deploy, two hours of use, destroy) costs about **$2 to $4**. Left running by mistake for a month,
 it would be ≈ $600; that's what the auto-stop, the alarm and the budget emails are for.
 
+**Measured** (g6.xlarge, us-east-1, 2026-11-08):
+
+| What | Time | Cost |
+|---|---|---|
+| First deploy (image build + ~25 GB of downloads) | ≈ 40 minutes | ≈ $0.55 |
+| A 66-second voiceover (about 165 words) | under 1 minute, faster than real time | ≈ $0.01 |
+| GPU memory with both models loaded | 15.8 of 23 GB | |
+
+So a minute of finished voiceover costs about one cent of GPU time. What you pay for is mostly the time the
+instance is on, which is why it stops itself when idle.
+
 ## Remove everything
 
 ```bash

@@ -16,6 +16,20 @@ from voiceover_studio.providers.openai_compat import infer_auth, is_local
 
 HOSTED_TTS: set[str] = set()  # names of hosted TTS providers (e.g. "fish_audio" once added)
 
+# The exact model versions (Hugging Face commits) this release was tested with, so an upstream model update
+# can't change what readers get. Used when a *_MODEL_REVISION setting is empty and the model is a default.
+# The LLM's pin is also in scripts/toolbox/lib.sh: vLLM, not this app, downloads that model.
+PINNED_REVISIONS = {
+    "Qwen/Qwen3-TTS-12Hz-1.7B-Base": "fd4b254389122332181a7c3db7f27e918eec64e3",  # tested 2026-11-08
+    "cyankiwi/Qwen3.5-9B-AWQ-4bit": "e4d2d39cede8c5d1716d824cd843e2889c648083",  # tested 2026-11-08
+    "small": "536b0662742c02347bc0e980a01041f333bce120",  # Systran/faster-whisper-small, tested 2026-11-08
+}
+
+
+def pinned(model: str, revision: str) -> str | None:
+    """The revision to load: the one you set, else the tested pin for a default model, else the latest."""
+    return revision or PINNED_REVISIONS.get(model)
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -24,6 +38,7 @@ class Settings:
 
     tts_provider: str = "qwen3_tts"
     tts_model: str = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    tts_model_revision: str = ""  # empty = the tested pin (PINNED_REVISIONS) for the default model
     tts_api_key_param: str = ""
 
     llm_provider: str = "openai_compat"
@@ -35,6 +50,7 @@ class Settings:
 
     asr_provider: str = "faster_whisper"
     asr_model: str = "small"
+    asr_model_revision: str = ""
     # Whisper only checks the short consent clip, so the CPU is fast enough and the GPU memory stays free for
     # the two big models. (Its CUDA build also lags the CUDA version torch uses.)
     asr_device: str = "cpu"
@@ -74,7 +90,13 @@ class Settings:
 
 def build_tts(s: Settings) -> TTSProvider:
     if s.tts_provider == "qwen3_tts":
-        return registry.create("tts", "qwen3_tts", model=s.tts_model, device=f"{s.device}:0")  # type: ignore[return-value]
+        return registry.create(  # type: ignore[return-value]
+            "tts",
+            "qwen3_tts",
+            model=s.tts_model,
+            revision=pinned(s.tts_model, s.tts_model_revision),
+            device=f"{s.device}:0",
+        )
     return registry.create("tts", s.tts_provider, api_key_param=s.tts_api_key_param, region=s.aws_region)  # type: ignore[return-value]
 
 
@@ -93,9 +115,14 @@ def build_llm(s: Settings) -> LLMProvider:
 
 def build_asr(s: Settings) -> ASRProvider:
     compute = "float16" if s.asr_device == "cuda" else "int8"
-    return registry.create(
-        "asr", s.asr_provider, model=s.asr_model, device=s.asr_device, compute_type=compute
-    )  # type: ignore[return-value]
+    return registry.create(  # type: ignore[return-value]
+        "asr",
+        s.asr_provider,
+        model=s.asr_model,
+        revision=pinned(s.asr_model, s.asr_model_revision),
+        device=s.asr_device,
+        compute_type=compute,
+    )
 
 
 def build_storage(s: Settings) -> StorageProvider:

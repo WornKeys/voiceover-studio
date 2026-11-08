@@ -34,6 +34,9 @@ services:
       - /opt/voiceover/cache/llm:/root/.cache/huggingface
     command:
       - ${LLM_MODEL}
+      # The exact model version that was tested (a Hugging Face commit), for the weights and the tokenizer.
+      - --revision=${LLM_MODEL_REVISION:-main}
+      - --tokenizer-revision=${LLM_MODEL_REVISION:-main}
       # Share the GPU: vLLM takes this fraction of its memory, the voice model uses the rest.
       - --gpu-memory-utilization=${LLM_GPU_MEMORY:-0.5}
       # Scripts are short: a small context keeps the KV cache (and the memory it needs) small.

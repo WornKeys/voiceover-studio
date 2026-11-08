@@ -26,8 +26,10 @@ class Qwen3TTS(TTSProvider):
         device: str = "cuda:0",
         attention: str = "sdpa",  # flash_attention_2 is faster but needs a matching prebuilt wheel
         max_chars_per_call: int = 250,
+        revision: str | None = None,  # a Hugging Face commit; None = the latest
     ):
         self.model_id = model
+        self.revision = revision
         self.device = device
         self.attention = attention
         self.max_chars_per_call = max_chars_per_call
@@ -37,10 +39,14 @@ class Qwen3TTS(TTSProvider):
     def _load(self):
         if self._model is None:
             import torch
+            from huggingface_hub import snapshot_download
             from qwen_tts import Qwen3TTSModel
 
+            # Download the whole repo at one commit, then load from that folder: qwen-tts passes a revision to
+            # the model but not to its text processor, so loading by name could mix files from two versions.
+            local_dir = snapshot_download(self.model_id, revision=self.revision)
             self._model = Qwen3TTSModel.from_pretrained(
-                self.model_id,
+                local_dir,
                 device_map=self.device,
                 dtype=torch.bfloat16,
                 attn_implementation=self.attention,

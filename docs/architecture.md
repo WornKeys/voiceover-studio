@@ -274,11 +274,26 @@ uv tool install pre-commit && pre-commit install   # no audio, ruff, gitleaks on
 - User-facing messages are plain language, saying what happened and what to do next.
 - Pin versions (images, tools, actions). Model revisions get pinned after the dry run.
 
-## 8. Known gaps (as of 2026-11-08)
+## 8. Pinned versions
 
-- Not yet run end to end on AWS: the dry run is in progress. Expect IAM and timing fixes.
-- `infra/terraform/.terraform.lock.hcl` not committed yet (generate it multi-platform after the dry run).
-- Model revisions aren't pinned (Qwen3-TTS, the AWQ LLM).
+| What | Version | Where it's set |
+|---|---|---|
+| Voice model `Qwen/Qwen3-TTS-12Hz-1.7B-Base` | commit `fd4b2543` | `PINNED_REVISIONS` in `settings.py`; whole snapshot downloaded, then loaded from disk |
+| Script writer `cyankiwi/Qwen3.5-9B-AWQ-4bit` | commit `e4d2d39c` | `PINNED_REVISIONS` + `DEFAULT_LLM_REVISION` in `scripts/toolbox/lib.sh` (a test keeps them equal) → vLLM `--revision` |
+| Whisper `small` (`Systran/faster-whisper-small`) | commit `536b0662` | `PINNED_REVISIONS` |
+| vLLM | `vllm/vllm-openai:v0.32.0` | `docker/compose.yaml` |
+| Python packages | `uv.lock` | `uv sync --locked` (CI and the image) |
+| Terraform + AWS provider | 1.16.7, provider 6.72.0 | `toolbox/Dockerfile`, `infra/terraform/.terraform.lock.hcl` |
+| Toolbox tools | AWS CLI 2.38.6, SSM plugin 1.2.889.0 | `toolbox/Dockerfile` |
+
+All tested together on 2026-11-08. A `*_MODEL_REVISION` setting overrides a model pin; a model that isn't a
+default loads its latest version unless you set one.
+
+## 9. Known gaps (as of 2026-11-08)
+
+- The dry run deployed and generated successfully; `destroy.sh` and a clean re-deploy are still to be tested.
 - MP3 output isn't implemented (WAV, SRT and provenance only).
+- Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
+  `qwen-tts` 0.1.1 blocks. Firefox works.
 - Not built: account bootstrap script (`infra/bootstrap/`), Fish Audio provider, Bedrock IAM additions, synthetic
   demo voice, "re-generate one sentence".
