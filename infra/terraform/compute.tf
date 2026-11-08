@@ -50,7 +50,7 @@ resource "aws_instance" "app" {
   vpc_security_group_ids = [aws_security_group.instance.id]
   iam_instance_profile   = aws_iam_instance_profile.instance.name
 
-  associate_public_ip_address = true   # outbound only (no inbound rules); avoids a ~$32/month NAT gateway
+  associate_public_ip_address          = true   # outbound only (no inbound rules); avoids a ~$32/month NAT gateway
   instance_initiated_shutdown_behavior = "stop" # the idle timer shuts down -> stopped, not terminated
 
   metadata_options {
