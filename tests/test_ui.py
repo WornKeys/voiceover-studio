@@ -1,20 +1,60 @@
+from pathlib import Path
+
 import gradio as gr
+import pytest
 
 from tests.test_api import make_client, sample_wav
+from voiceover_studio import ui as ui_module
 from voiceover_studio.ui import (
     STEP_SCRIPT,
     STEP_VOICE,
+    UploadError,
     build_ui,
     component_for,
     language_choices,
+    read_upload,
     script_summary,
     voice_label,
 )
 
 
+@pytest.fixture(autouse=True)
+def upload_dir(tmp_path, monkeypatch) -> Path:
+    """Gradio's upload folder for the test: the UI only reads recordings from there."""
+    folder = tmp_path / "gradio-uploads"
+    folder.mkdir()
+    monkeypatch.setenv("GRADIO_TEMP_DIR", str(folder))
+    return folder
+
+
+def recording_in(folder: Path, tmp_path: Path) -> str:
+    path = folder / "reading.wav"
+    path.write_bytes(sample_wav(tmp_path))  # synthetic: flagged as noisy
+    return str(path)
+
+
 def handler(ui: gr.Blocks, name: str):
     """The Python function behind a UI event, to drive the guided flow without a browser."""
     return next(f.fn for f in ui.fns.values() if f.fn and f.fn.__name__ == name)
+
+
+def test_only_files_from_gradios_upload_folder_are_read(upload_dir, tmp_path, monkeypatch):
+    inside = upload_dir / "sample.wav"
+    inside.write_bytes(b"RIFF")
+    assert read_upload(str(inside)) == b"RIFF"
+    with pytest.raises(UploadError, match="didn't come from"):
+        read_upload(str(Path(__file__)))  # any other file on the server
+    with pytest.raises(UploadError, match="didn't come from"):
+        read_upload(str(upload_dir / ".." / "elsewhere.wav"))  # climbing out of the folder
+    monkeypatch.setattr(ui_module, "MAX_UPLOAD_BYTES", 3)
+    with pytest.raises(UploadError, match="too large"):
+        read_upload(str(inside))
+
+
+def test_save_voice_refuses_a_path_outside_the_upload_folder(tmp_path):
+    ui = build_ui(make_client(tmp_path).app.state.services)
+    message, *_ = handler(ui, "save_voice")(str(Path(__file__)))
+    assert message.startswith("**Not saved.**")
 
 
 def test_plugin_settings_schema_becomes_controls():
@@ -42,13 +82,12 @@ def test_ui_builds_with_plugins_enabled(tmp_path):
     assert isinstance(ui, gr.Blocks)
 
 
-def test_guided_flow_voice_then_script_then_generate(tmp_path):
+def test_guided_flow_voice_then_script_then_generate(tmp_path, upload_dir):
     ui = build_ui(make_client(tmp_path).app.state.services)
 
     # Step 1: a saved recording with quality warnings is selected, but step 1 stays open so they get read.
-    recording = tmp_path / "reading.wav"
-    recording.write_bytes(sample_wav(tmp_path))  # synthetic: flagged as noisy
-    message, picker, actions, step1, _step2, _cleared = handler(ui, "save_voice")(str(recording))
+    recording = recording_in(upload_dir, tmp_path)
+    message, picker, actions, step1, _step2, _cleared = handler(ui, "save_voice")(recording)
     assert message.startswith("Voice saved") and "Background noise" in message and "Use this voice" in message
     voice_id = picker["value"]
     assert actions["visible"] is True and step1 == gr.update()
@@ -84,12 +123,10 @@ def test_generate_explains_what_is_missing(tmp_path):
     assert next(generate("some-voice", " ", "en", progress=None))[0].startswith("Write or paste a script")
 
 
-def test_delete_needs_confirmation_and_hides_an_empty_picker(tmp_path):
+def test_delete_needs_confirmation_and_hides_an_empty_picker(tmp_path, upload_dir):
     client = make_client(tmp_path)
     ui = build_ui(client.app.state.services)
-    recording = tmp_path / "reading.wav"
-    recording.write_bytes(sample_wav(tmp_path))
-    voice_id = handler(ui, "save_voice")(str(recording))[1]["value"]
+    voice_id = handler(ui, "save_voice")(recording_in(upload_dir, tmp_path))[1]["value"]
 
     delete = handler(ui, "delete_voice")
     assert delete(None) == (gr.update(), gr.update(), gr.update())  # cancelled in the browser's confirm()

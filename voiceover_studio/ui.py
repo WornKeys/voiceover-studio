@@ -12,9 +12,9 @@ The same Services as the HTTP API do the work.
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 import gradio as gr
@@ -66,6 +66,29 @@ CSS = """
 .gradio-container { max-width: 920px !important; margin: 0 auto !important; }
 footer { display: none !important; }
 """
+
+
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # a 15-second voice sample is well under 1 MB, even as uncompressed WAV
+
+
+class UploadError(ValueError):
+    pass
+
+
+def read_upload(path: str) -> bytes:
+    """Read a file the user recorded or uploaded through Gradio.
+
+    Gradio hands the handler a path inside its own upload folder. Only such paths are read: a second check on top
+    of Gradio's own (older Gradio versions had bugs that let a crafted request name any file on the server).
+    """
+    root = os.path.realpath(gr.utils.get_upload_folder())
+    real = os.path.realpath(path)
+    if not real.startswith(root + os.sep):
+        raise UploadError("That file didn't come from the recorder or the upload button.")
+    if os.path.getsize(real) > MAX_UPLOAD_BYTES:
+        raise UploadError("That file is too large for a voice sample (20 MB at most).")
+    with open(real, "rb") as f:
+        return f.read()
 
 
 # --- small helpers (no Gradio state; unit-tested) ----------------------------------------------------------
@@ -258,7 +281,11 @@ def build_ui(services: Services) -> gr.Blocks:
             if not audio_path:
                 return "Record or upload your reading of the sentence first.", keep, keep, keep, keep, keep
             try:
-                saved_voice = services.add_voice(Path(audio_path).read_bytes())
+                data = read_upload(audio_path)
+            except (UploadError, OSError) as exc:
+                return f"**Not saved.** {exc}", keep, keep, keep, keep, keep
+            try:
+                saved_voice = services.add_voice(data)
             except SampleRejectedError as exc:
                 message = "**Please record again:**\n" + "\n".join(f"- {p}" for p in exc.problems)
                 return message, keep, keep, keep, keep, keep
