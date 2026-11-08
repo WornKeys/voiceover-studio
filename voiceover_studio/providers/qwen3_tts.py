@@ -45,10 +45,13 @@ class Qwen3TTS(TTSProvider):
             # Download the whole repo at one commit, then load from that folder: qwen-tts passes a revision to
             # the model but not to its text processor, so loading by name could mix files from two versions.
             local_dir = snapshot_download(self.model_id, revision=self.revision)
+            # bfloat16 halves GPU memory, but most CPUs have no fast bfloat16 maths, so a local CPU run in
+            # bfloat16 is far slower than in float32. On a CPU, memory is the cheaper resource.
+            on_cpu = str(self.device).startswith("cpu")
             self._model = Qwen3TTSModel.from_pretrained(
                 local_dir,
                 device_map=self.device,
-                dtype=torch.bfloat16,
+                dtype=torch.float32 if on_cpu else torch.bfloat16,
                 attn_implementation=self.attention,
             )
         return self._model

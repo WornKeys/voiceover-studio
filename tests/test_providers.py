@@ -121,6 +121,7 @@ def test_qwen3_tts_maps_language_and_passes_reference_transcript(monkeypatch):
         @classmethod
         def from_pretrained(cls, model_id, **kwargs):
             calls["load"] = (model_id, kwargs["attn_implementation"])
+            calls["dtype"] = kwargs["dtype"]
             return cls()
 
         def generate_voice_clone(self, **kwargs):
@@ -131,7 +132,7 @@ def test_qwen3_tts_maps_language_and_passes_reference_transcript(monkeypatch):
         calls["download"] = (repo_id, revision)
         return f"/cache/{repo_id}@{revision}"
 
-    monkeypatch.setitem(sys.modules, "torch", types.SimpleNamespace(bfloat16="bf16"))
+    monkeypatch.setitem(sys.modules, "torch", types.SimpleNamespace(bfloat16="bf16", float32="f32"))
     monkeypatch.setitem(sys.modules, "qwen_tts", types.SimpleNamespace(Qwen3TTSModel=FakeModel))
     monkeypatch.setitem(
         sys.modules, "huggingface_hub", types.SimpleNamespace(snapshot_download=fake_snapshot_download)
@@ -143,6 +144,11 @@ def test_qwen3_tts_maps_language_and_passes_reference_transcript(monkeypatch):
     # The whole repo is fetched at the pinned commit, then loaded from that folder (model + processor match).
     assert calls["download"] == ("Qwen/Qwen3-TTS-12Hz-1.7B-Base", "abc123")
     assert calls["load"] == ("/cache/Qwen/Qwen3-TTS-12Hz-1.7B-Base@abc123", "sdpa")
+    assert calls["dtype"] == "f32"  # CPUs have no fast bfloat16 maths
+    registry.create("tts", "qwen3_tts", device="cuda:0").synthesize(
+        "Hello.", VoiceReference(Path("v.wav"), "I am recording my own voice.", "c1"), "en"
+    )
+    assert calls["dtype"] == "bf16"  # on a GPU, half the memory
     assert clip.sample_rate == 24000 and abs(clip.seconds - 0.1) < 1e-6
     with pytest.raises(ValueError, match="doesn't support"):
         tts.synthesize("Namaste.", VoiceReference(Path("v.wav"), "t", "c1"), "hi")
@@ -204,6 +210,8 @@ def test_default_models_load_the_tested_versions():
     assert PINNED_REVISIONS[s.llm_model]  # vLLM gets it through scripts/toolbox/lib.sh
     # Your own revision wins; another model has no pin, so it loads the latest unless you set one.
     assert build_tts(Settings(tts_model_revision="abc123")).revision == "abc123"
+    assert build_tts(Settings(device="cuda")).device == "cuda:0"
+    assert build_tts(Settings(device="cpu")).device == "cpu"  # "cpu:0" fails to load
     assert build_asr(Settings(asr_model="medium")).revision is None
     assert build_tts(Settings.from_env({"TTS_MODEL_REVISION": "v2"})).revision == "v2"
 

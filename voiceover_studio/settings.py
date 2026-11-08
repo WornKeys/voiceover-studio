@@ -95,7 +95,9 @@ def build_tts(s: Settings) -> TTSProvider:
             "qwen3_tts",
             model=s.tts_model,
             revision=pinned(s.tts_model, s.tts_model_revision),
-            device=f"{s.device}:0",
+            # "cuda:0" picks the first GPU; a CPU has no index ("cpu:0" makes the model loader look for an
+            # accelerator and fail).
+            device="cpu" if s.device == "cpu" else f"{s.device}:0",
         )
     return registry.create("tts", s.tts_provider, api_key_param=s.tts_api_key_param, region=s.aws_region)  # type: ignore[return-value]
 
