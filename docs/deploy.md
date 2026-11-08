@@ -33,8 +33,14 @@ Done once per account by an admin. It creates the guardrails that make a surpris
 | GPU quota: 4 vCPUs | At most one GPU instance can run |
 | Account budget + cost anomaly alerts | Emails when spending goes up |
 
-The step-by-step guide and the policy files move into `infra/bootstrap/` (with a script that applies them) after
-the first full test run. Until then they're kept with the blog series.
+One command sets it all up, with an admin profile (it shows the changes and asks first; safe to re-run):
+
+```bash
+./scripts/bootstrap.sh --profile <your-admin-profile>
+```
+
+A few steps need you or your phone (root MFA, the operator's password and MFA device); the script lists what's
+still missing. Details, the policy files and the console-only alternative: [infra/bootstrap/README.md](../infra/bootstrap/README.md).
 
 You end up with two AWS CLI profiles: `voiceover-operator` (you sign in with `aws login`) and `voiceover` (assumes
 the deploy role with your MFA code). `.env` only names the second one.

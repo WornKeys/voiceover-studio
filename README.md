@@ -35,13 +35,14 @@ See [RESPONSIBLE_USE.md](RESPONSIBLE_USE.md).
 
 ```bash
 cp .env.example .env                       # set BUDGET_EMAIL
+./scripts/bootstrap.sh --profile <admin>   # once per AWS account: guardrails, deploy role, GPU quota
 aws login --profile voiceover-operator
 ./scripts/deploy.sh                        # first time: 30-60 minutes
 ./scripts/connect.sh                       # then open http://localhost:7860
 ./scripts/destroy.sh                       # when you're done: removes everything and checks
 ```
 
-Needs Docker and the AWS CLI v2, plus a one-time account setup and a GPU quota. Costs, auto-stop and
+Needs Docker and the AWS CLI v2. The account setup is explained in [infra/bootstrap/](infra/bootstrap/README.md). Costs, auto-stop and
 troubleshooting: [docs/deploy.md](docs/deploy.md). Every AWS service involved: [docs/aws-services.md](docs/aws-services.md).
 
 ## Layout
@@ -55,8 +56,9 @@ How it's built and how to work on it: [docs/architecture.md](docs/architecture.m
 | `voiceover_studio/plugins/` | Plugins: `fit_to_length`, `translate`. Write your own: [docs/plugins.md](docs/plugins.md) |
 | `config.yaml`, `.env.example` | App settings and deployment settings |
 | `Dockerfile`, `docker/compose.yaml` | The app image and the two containers on the instance (app + vLLM) |
+| `infra/bootstrap/` | One-time account setup: guardrail policies, deploy role, operator user (`scripts/bootstrap.sh`) |
 | `infra/terraform/`, `infra/instance/` | AWS resources; install/update and idle auto-stop on the instance |
-| `scripts/*.sh`, `toolbox/` | Deploy, connect, start, stop, status, secrets, destroy (run in a toolbox container) |
+| `scripts/*.sh`, `toolbox/` | Bootstrap, deploy, connect, start, stop, status, secrets, destroy (run in a toolbox container) |
 | `scripts/check_no_audio.py` | Keeps voice recordings out of git (pre-commit + CI) |
 
 ## Development
@@ -68,6 +70,13 @@ uv run ruff check . && uv run ruff format --check .
 uv tool install pre-commit && pre-commit install
 uv sync --extra gpu          # optional: the real models (Linux + NVIDIA GPU; CPU works, slowly)
 ```
+
+## How this was built
+
+Built by Shailendra Karambe with [Claude Code](https://claude.com/claude-code) as an AI pair programmer.
+I designed the system and its guardrails, made the decisions and tested everything on a real AWS account;
+Claude Code wrote much of the code and documentation under my direction and review. Commits it helped with
+carry a `Co-Authored-By` line.
 
 ## License
 

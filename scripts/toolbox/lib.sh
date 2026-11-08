@@ -24,8 +24,10 @@ confirm() {
 }
 
 # Read .env as data (KEY=value lines), never as shell code. Tolerates Windows line endings and quotes.
+# VOICEOVER_SETTINGS_FILE points to another settings file (e.g. a second deployment, or the script tests).
 load_env() {
-  [[ -f .env ]] || die "No .env file. Run: cp .env.example .env, then fill in your values."
+  local settings=${VOICEOVER_SETTINGS_FILE:-.env}
+  [[ -f "$settings" ]] || die "No $settings file. Run: cp .env.example .env, then fill in your values."
   local line n=0
   while IFS= read -r line || [[ -n "$line" ]]; do
     n=$((n + 1))
@@ -37,9 +39,9 @@ load_env() {
       value=${value%\"}
       export "$key=$value"
     else
-      warn ".env line $n isn't KEY=value; ignored."
+      warn "$settings line $n isn't KEY=value; ignored."
     fi
-  done <.env
+  done <"$settings"
 
   export AWS_REGION=${AWS_REGION:-us-east-1}
   export AWS_DEFAULT_REGION=$AWS_REGION

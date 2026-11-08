@@ -4,7 +4,7 @@ Every AWS service this project touches: what it's for, who creates it, what it c
 removes it. Kept up to date as the project changes (see the change log at the end).
 
 Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current prices).
-**Created by:** *account setup* = the one-time admin setup, by hand; *Terraform* = `deploy.sh`;
+**Created by:** *account setup* = the one-time admin setup (`scripts/bootstrap.sh`, or by hand: `infra/bootstrap/README.md`); removed with `bootstrap.sh --remove`; *Terraform* = `deploy.sh`;
 *script* = another command in `scripts/`; *AWS* = created by AWS itself.
 
 ## Runs the app
@@ -30,11 +30,11 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 
 | Service | What we use | Purpose | Created by | Cost | Removed by `destroy.sh` |
 |---|---|---|---|---|---|
-| **AWS IAM** | Role `VoiceoverStudioDeployer` (MFA required, 1 h sessions); policies `voiceover-studio-deployer-compute`, `-deployer-services`, `-guardrails`, `-instance-boundary`; user `voiceover-operator` (console sign-in + MFA, no access keys) | Least-privilege deploys and guardrails against surprise bills | account setup | Free | No (kept on purpose) |
+| **AWS IAM** | Role `VoiceoverStudioDeployer` (MFA required, 1 h sessions); policies `voiceover-studio-deployer-compute`, `-deployer-services`, `-guardrails`, `-instance-boundary`; user `voiceover-operator` (console sign-in + MFA, no access keys) | Least-privilege deploys and guardrails against surprise bills | account setup | Free | No (`bootstrap.sh --remove`) |
 | **AWS Sign-In** (`aws login`) | Console sign-in turned into short-lived CLI credentials (managed policy `SignInLocalDevelopmentAccess`) | No long-lived access keys anywhere | account setup | Free | No |
 | **AWS STS** | `AssumeRole` with MFA; `GetCallerIdentity` | Temporary credentials for the deploy role; preflight checks | AWS | Free | n/a |
 | **Service Quotas** | EC2 "Running On-Demand G and VT instances" = 4 vCPUs | At most one GPU instance can run | account setup (request); AWS approves | Free | No (kept) |
-| **AWS Budgets** | Account budget `account-monthly` | Spending alerts for the whole account | account setup | Free | No |
+| **AWS Budgets** | Account budget `account-monthly` | Spending alerts for the whole account | account setup | Free | No (`bootstrap.sh --remove`) |
 | **Cost Anomaly Detection** | Monitor (AWS services) with an email subscription | Alerts on unusual spending | account setup | Free | No |
 | **Cost Explorer** | Enabled | See where the money went | account setup | Free in the console | No |
 | **S3** (account setting) | Block Public Access at account level | No bucket can be made public | account setup | Free | No |
@@ -65,3 +65,4 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 | 2026-11-08 | First version: services as built in `infra/terraform/` and the account setup. Dry run in progress |
 | 2026-11-08 | SSM Run Command: the install now runs as a background systemd service on the instance; Run Command only starts it and reads its log every 15 s (one long command hit its time limit in the dry run) |
 | 2026-11-08 | EBS root volume 100 → 150 GB (≈ $8 → $12/month, also while stopped): the first install ran out of disk unpacking the vLLM image. A size change replaces the instance (the deploy role can't resize volumes; `terraform_data` + `replace_triggered_by`) |
+| 2026-11-08 | Account setup scripted: `scripts/bootstrap.sh` creates or checks S3 Block Public Access, the account budget, cost anomaly alerts (monitor `voiceover-account-services`, subscription `voiceover-account-alerts`), the GPU quota request, the four policies, the operator user and the deploy role; `--remove` deletes them. Policies moved to `infra/bootstrap/policies/` |

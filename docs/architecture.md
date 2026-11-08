@@ -231,7 +231,8 @@ start. The models load from the disk cache in a few minutes.
 | `docker/compose.yaml`, `docker/compose.cpu.yaml` | The two containers; the CPU override removes the GPU reservation |
 | `infra/terraform/` | AWS resources (section 5) |
 | `infra/instance/` | `start-update.sh` (starts the install in the background), `update.sh`, `idle-stop.sh` and its systemd units |
-| `scripts/*.sh` | Host commands: deploy, connect, start, stop, status, secret, preflight, destroy |
+| `scripts/*.sh` | Host commands: bootstrap (one-time account setup), deploy, connect, start, stop, status, secret, preflight, destroy |
+| `infra/bootstrap/` | Account setup: IAM policies (`policies/`) and what each piece is for (`README.md`) |
 | `scripts/lib/host.sh` | Credentials + runs the toolbox (also handles Git Bash path conversion) |
 | `scripts/toolbox/` | The real logic, run inside the toolbox (bash 5, pinned tools) |
 | `toolbox/Dockerfile` | Terraform 1.16.7, AWS CLI 2.38.6, Session Manager plugin 1.2.889.0 |
@@ -295,5 +296,6 @@ default loads its latest version unless you set one.
 - MP3 output isn't implemented (WAV, SRT and provenance only).
 - Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
   `qwen-tts` 0.1.1 blocks. Firefox works.
-- Not built: account bootstrap script (`infra/bootstrap/`), Fish Audio provider, Bedrock IAM additions, synthetic
-  demo voice, "re-generate one sentence".
+- `scripts/bootstrap.sh` is tested against a fake AWS CLI (fresh account, finished account, removal), not yet
+  against a real account.
+- Not built: Fish Audio provider, Bedrock IAM additions, synthetic demo voice, "re-generate one sentence".

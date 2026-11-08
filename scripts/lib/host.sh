@@ -48,10 +48,14 @@ run_in_toolbox() {
     die "The AWS CLI v2 isn't installed: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
 
   local profile creds key value
-  profile=$(env_value AWS_PROFILE)
+  # The deploy role's profile from .env, unless a command needs another one (bootstrap.sh: an admin).
+  profile=${TOOLBOX_PROFILE:-$(env_value AWS_PROFILE)}
   profile=${profile:-voiceover}
-  # Short-lived credentials of the deploy role. The CLI asks for your MFA code when its cached session expired.
+  # Short-lived credentials of that profile. The CLI asks for your MFA code when its cached session expired.
   if ! creds=$(aws configure export-credentials --profile "$profile" --format env-no-export); then
+    if [ -n "${TOOLBOX_PROFILE:-}" ]; then
+      die "No credentials for profile '$profile'. Sign in with it first (e.g. aws login --profile $profile)."
+    fi
     die "No credentials for profile '$profile'. Sign in first: aws login --profile voiceover-operator"
   fi
   while IFS='=' read -r key value; do
