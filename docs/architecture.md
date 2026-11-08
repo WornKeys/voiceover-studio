@@ -270,7 +270,8 @@ uv tool install pre-commit && pre-commit install   # no audio, ruff, gitleaks on
 
 ### Conventions
 
-- The repo is private until `v1.0.0`; work happens on `main`. Before going public, the history scans must be clean.
+- Work happens on `main`, with CI on every push; releases get a version tag. CI scans the whole history for
+  secrets and audio files, so nothing private can slip into a public commit.
 - No real person's voice in the repo, ever. Test audio is generated (tones), and `.gitignore` plus the audio check enforce it.
 - User-facing messages are plain language, saying what happened and what to do next.
 - Pin versions (images, tools, actions). Model revisions get pinned after the dry run.
@@ -292,7 +293,8 @@ default loads its latest version unless you set one.
 
 ## 9. Known gaps (as of 2026-11-08)
 
-- The dry run deployed and generated successfully; `destroy.sh` and a clean re-deploy are still to be tested.
+- Tested end to end on AWS in November 2026: account setup, deploy, voice, script, render, `destroy.sh`, and a clean
+  re-deploy (26 minutes).
 - MP3 output isn't implemented (WAV, SRT and provenance only).
 - Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
   `qwen-tts` 0.1.1 blocks. Firefox works.

@@ -52,7 +52,7 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 | Service | Why not |
 |---|---|
 | NAT gateway, Elastic IP, VPC endpoints, load balancers | Cost (≈ $32/month for NAT alone) and not needed: no inbound traffic, outbound via the instance's public IPv4. Denied by the guardrails |
-| ECR | The image is built on the instance from the code bundle; the repo is private, and the deploy role has no ECR access |
+| ECR | The image is built on the instance from your working copy, so your own changes deploy without a registry, and the deploy role needs no ECR access |
 | SageMaker | Too much machinery for one user and one GPU |
 | KMS customer-managed keys | S3-managed and AWS-managed keys encrypt at rest at no cost |
 | Spot instances, reservations, Savings Plans | Denied by the guardrails (spot can come later as an option) |
