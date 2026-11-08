@@ -42,9 +42,11 @@ aws login --profile voiceover-operator
 ```
 
 Needs Docker and the AWS CLI v2, plus a one-time account setup and a GPU quota. Costs, auto-stop and
-troubleshooting: [docs/deploy.md](docs/deploy.md).
+troubleshooting: [docs/deploy.md](docs/deploy.md). Every AWS service involved: [docs/aws-services.md](docs/aws-services.md).
 
 ## Layout
+
+How it's built and how to work on it: [docs/architecture.md](docs/architecture.md).
 
 | Path | What |
 |---|---|
