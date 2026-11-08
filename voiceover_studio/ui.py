@@ -38,6 +38,35 @@ DOWNLOADS_HELP = """**Your files:** `voiceover.wav` is the audio for your video 
 captions you can upload to YouTube or add in your editor. `provenance.json` records that the audio is
 AI-generated, with the watermark details."""
 
+# A quiet look: slate greys, graphite primary buttons (light grey in dark mode), the system font (no web-font
+# download through the tunnel) and a readable page width. Light and dark follow the browser's setting.
+THEME = gr.themes.Base(
+    primary_hue="slate",
+    secondary_hue="slate",
+    neutral_hue="slate",
+    radius_size="md",
+    font=("ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"),
+    font_mono=("ui-monospace", "SFMono-Regular", "Consolas", "monospace"),
+).set(
+    body_background_fill="*neutral_50",
+    body_background_fill_dark="*neutral_950",
+    block_title_text_weight="600",
+    button_primary_background_fill="*neutral_800",
+    button_primary_background_fill_hover="*neutral_700",
+    button_primary_border_color="*neutral_800",
+    button_primary_text_color="white",
+    button_primary_background_fill_dark="*neutral_200",
+    button_primary_background_fill_hover_dark="*neutral_300",
+    button_primary_border_color_dark="*neutral_200",
+    button_primary_text_color_dark="*neutral_900",
+    slider_color="*neutral_600",
+    checkbox_background_color_selected="*neutral_700",
+)
+CSS = """
+.gradio-container { max-width: 920px !important; margin: 0 auto !important; }
+footer { display: none !important; }
+"""
+
 
 # --- small helpers (no Gradio state; unit-tested) ----------------------------------------------------------
 def voice_label(voice: dict[str, Any]) -> str:

@@ -12,13 +12,13 @@ from voiceover_studio.api import create_app
 from voiceover_studio.core.config import load_config
 from voiceover_studio.services import Services
 from voiceover_studio.settings import Settings
-from voiceover_studio.ui import build_ui
+from voiceover_studio.ui import CSS, THEME, build_ui
 
 
 def build():
     services = Services(Settings.from_env(), load_config())
     app = create_app(services)
-    return gr.mount_gradio_app(app, build_ui(services), path="/")
+    return gr.mount_gradio_app(app, build_ui(services), path="/", theme=THEME, css=CSS)
 
 
 def main() -> None:
