@@ -199,7 +199,7 @@ commands (`follow_update`), and reads the outcome from `/opt/voiceover/update-re
 session only stops the watching: `./scripts/deploy.sh --follow` picks it up again. A second install can't start
 while one is running.
 
-On the instance (`/opt/voiceover/`): `releases/<release>/` (the last two kept), `current` (symlink), `app.env`,
+On the instance (`/opt/voiceover/`): `releases/<release>/` (the current one and the two before it), `current` (symlink), `app.env`,
 `secrets.env`, `cache/app` (voice/ASR/watermark models), `cache/llm` (LLM weights), `bin/idle-stop.sh`,
 `idle-minutes`, `update-log-start`, `update-result`. Install log: `/var/log/voiceover-update.log`.
 

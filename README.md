@@ -47,7 +47,9 @@ troubleshooting: [docs/deploy.md](docs/deploy.md). Every AWS service involved: [
 
 ## Layout
 
-How it's built and how to work on it: [docs/architecture.md](docs/architecture.md).
+How it's built and how to work on it: [docs/architecture.md](docs/architecture.md). To learn from the code itself,
+follow the guided tour in [docs/learn/](docs/learn/README.md): how a voiceover is made, the UI, the Terraform, and
+what the deploy scripts do.
 
 | Path | What |
 |---|---|
