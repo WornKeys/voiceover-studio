@@ -41,6 +41,16 @@ case "$COMPUTE_PROFILE:$INSTANCE_TYPE" in
   *) fail "INSTANCE_TYPE=$INSTANCE_TYPE doesn't fit COMPUTE_PROFILE=$COMPUTE_PROFILE." ;;
 esac
 
+zones=$(offered_zones)
+if [[ -n "${AVAILABILITY_ZONE:-}" && " $zones " != *" $AVAILABILITY_ZONE "* ]]; then
+  fail "AVAILABILITY_ZONE=$AVAILABILITY_ZONE doesn't offer $INSTANCE_TYPE. Zones that do: $zones"
+else
+  ok "Zones offering $INSTANCE_TYPE: $zones${AVAILABILITY_ZONE:+ (AVAILABILITY_ZONE=$AVAILABILITY_ZONE)}"
+fi
+if current=$(tf_out instance_id) && [[ -n "$current" ]]; then
+  note "  Current instance: $current, $(instance_state "$current" 2>/dev/null || echo unknown) in $(instance_zone "$current" 2>/dev/null || echo '?')"
+fi
+
 # GPU quota: "Running On-Demand G and VT instances" counts vCPUs; one *.xlarge needs 4.
 if [[ "$COMPUTE_PROFILE" == gpu ]]; then
   if quota=$(aws service-quotas get-service-quota --service-code ec2 --quota-code L-DB2E81BA \

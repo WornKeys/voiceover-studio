@@ -117,7 +117,8 @@ carries the tag `project=voiceover-studio`, so **Resource Groups > Tag Editor** 
 |---|---|
 | `No credentials for profile 'voiceover'` | `aws login --profile voiceover-operator`, then try again |
 | `GPU quota is 0 vCPUs` | Service Quotas > Amazon EC2 > "Running On-Demand G and VT instances" > request 4 |
-| `InsufficientInstanceCapacity` | AWS has no free GPU in that zone. Wait a few minutes, or set `AVAILABILITY_ZONE` and run `./scripts/deploy.sh --replace-instance`. `INSTANCE_TYPE=g5.xlarge` is the fallback |
+| `AWS has no free g6.xlarge in <zone>` (`InsufficientInstanceCapacity`) | AWS has no spare GPU of that type in that zone right now; the scripts already retried for 5 minutes. A stopped instance can only start in its own zone. Try later, or set `AVAILABILITY_ZONE` to another zone from the list the message (and preflight) shows and run `./scripts/deploy.sh --replace-instance`. `INSTANCE_TYPE=g5.xlarge` is the fallback type |
+| The instance stopped while you weren't using it, or right after a failed install | The idle auto-stop working as intended: with no app running and no install in progress, it stops the instance after `IDLE_STOP_MINUTES`. `connect.sh`, `start.sh` and `deploy.sh` start it again |
 | `AccessDenied` from Terraform | The deploy role doesn't allow that action. That's the guardrails working: check what you changed |
 | Deploy fails on the instance | The output shows the failing step. Full log: `/var/log/voiceover-update.log` (`aws ssm start-session --target <instance-id>` as the deploy role), or CloudWatch log group `/voiceover-studio/app` |
 | `Not enough disk space`, `no space left on device`, `failed to extract layer` | Raise `ROOT_VOLUME_GB` in `.env` (150 is the default, 200 the maximum), then `./scripts/deploy.sh`. The plan replaces the instance: a disk can't be resized in place by the deploy role |

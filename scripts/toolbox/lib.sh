@@ -95,8 +95,20 @@ instance_state() {
   aws ec2 describe-instances --instance-ids "$1" --query 'Reservations[0].Instances[0].State.Name' --output text
 }
 
+# Zones in the region that offer the instance type (capacity can still run out in any of them).
+offered_zones() {
+  aws ec2 describe-instance-type-offerings --location-type availability-zone \
+    --filters "Name=instance-type,Values=$INSTANCE_TYPE" --query 'InstanceTypeOfferings[].Location' --output text |
+    tr '\t' '\n' | sort | tr '\n' ' '
+}
+
+instance_zone() {
+  aws ec2 describe-instances --instance-ids "$1" \
+    --query 'Reservations[0].Instances[0].Placement.AvailabilityZone' --output text
+}
+
 ensure_running() {
-  local id=$1 state out
+  local id=$1 state out attempt zone
   state=$(instance_state "$id")
   case "$state" in
     running) return 0 ;;
@@ -107,13 +119,23 @@ ensure_running() {
       ;&
     stopped)
       say "Starting the instance ($INSTANCE_TYPE)"
-      if ! out=$(aws ec2 start-instances --instance-ids "$id" 2>&1); then
-        if [[ "$out" == *InsufficientInstanceCapacity* ]]; then
-          die "AWS has no free $INSTANCE_TYPE in this zone right now. Try again in a few minutes, or set
-       AVAILABILITY_ZONE in .env and run ./scripts/deploy.sh --replace-instance."
+      # GPU capacity in one zone often comes back within minutes: retry for about 5 minutes.
+      for attempt in $(seq 1 10); do
+        out=$(aws ec2 start-instances --instance-ids "$id" 2>&1) && break
+        [[ "$out" == *InsufficientInstanceCapacity* ]] || die "$out"
+        if ((attempt == 10)); then
+          zone=$(instance_zone "$id")
+          die "AWS has no free $INSTANCE_TYPE in $zone right now (tried for 5 minutes). A stopped instance
+       can only start in its own zone. Options:
+         - try again later, or
+         - move it: set AVAILABILITY_ZONE to another zone in .env, then ./scripts/deploy.sh --replace-instance
+           Zones offering $INSTANCE_TYPE: $(offered_zones)
+         - or set INSTANCE_TYPE=g5.xlarge in .env and run ./scripts/deploy.sh
+       Replacing the instance keeps the bucket (voices, outputs); the models download again."
         fi
-        die "$out"
-      fi
+        note "No free $INSTANCE_TYPE in this zone right now; trying again in 30 seconds ($attempt/10)"
+        sleep 30
+      done
       ;;
     *) die "The instance is $state." ;;
   esac
