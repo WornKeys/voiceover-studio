@@ -24,7 +24,10 @@ your machine                               AWS account (us-east-1)
 
 ## One-time AWS setup
 
-Done once per account by an admin. It creates the guardrails that make a surprise bill very unlikely:
+Done once per account by an admin. Your existing AWS account works: the guardrails apply to the project's own
+deploy role, not to anything else in the account. (A separate account only makes the bill easier to read. In a
+shared one, set `BUDGET_MONTHLY_USD` to your usual spend plus about $30, because the project budget counts the
+whole account.) It creates the guardrails that make a surprise bill very unlikely:
 
 | Piece | What it does |
 |---|---|

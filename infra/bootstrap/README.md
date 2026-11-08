@@ -2,8 +2,14 @@
 
 Before the first deploy, an AWS account needs a few things that the deploy scripts can't (and shouldn't) create
 for themselves: a deploy role that can only build this project, guardrails against surprise bills, and a GPU
-quota. `scripts/bootstrap.sh` sets all of it up with an **admin** profile, once. Use a dedicated AWS account for
-this project if you can.
+quota. `scripts/bootstrap.sh` sets all of it up with an **admin** profile, once.
+
+**Your existing account is fine.** The guardrails are attached to the project's own deploy role, not to the
+account, so nothing else you run is restricted. A separate account is simply tidier: the bill shows only this
+project, and the project can't touch anything else. In an account that's already in use, the script behaves a
+little differently (see the table below), and the project budget counts the whole account's spending, so set
+`BUDGET_MONTHLY_USD` to your usual monthly spend plus about $30. Preflight also checks that the region still has
+its default VPC (some older accounts deleted it).
 
 ```bash
 ./scripts/bootstrap.sh --profile <your-admin-profile>      # shows what it will do, asks, then does it
@@ -16,8 +22,8 @@ missing or different (a policy that differs from the repo's version is shown as 
 
 | Piece | Why |
 |---|---|
-| S3 Block Public Access (whole account) | No bucket in the account can be made public by mistake |
-| Budget `account-monthly` ($`ACCOUNT_BUDGET_USD`, default 30) | Emails `BUDGET_EMAIL` at 50 %, 80 % and 100 % of actual spend and at 100 % of the forecast. Separate from the project budget that Terraform creates and destroys |
+| S3 Block Public Access (whole account) | No bucket in the account can be made public by mistake. **Only in an account with no other buckets:** elsewhere, one of them may be public on purpose (a static website), so the script leaves the setting alone and says so. The project's bucket blocks public access on its own either way |
+| Budget `account-monthly` ($`ACCOUNT_BUDGET_USD`, default 30) | Emails `BUDGET_EMAIL` at 50 %, 80 % and 100 % of actual spend and at 100 % of the forecast. Separate from the project budget that Terraform creates and destroys. **Skipped if the account already has budgets** |
 | Cost anomaly alerts | A daily email when spending on a service jumps by $10 or more |
 | GPU quota request: 4 vCPUs | "Running On-Demand G and VT instances" starts at 0. 4 vCPUs = exactly one g6/g5 `.xlarge`. AWS approves it, in hours to days, so start early |
 | Policy `voiceover-studio-deployer-compute` + `-deployer-services` | What the deploy role may do: only this project's names, tags and resource types (two files because of IAM's 6,144-character limit) |

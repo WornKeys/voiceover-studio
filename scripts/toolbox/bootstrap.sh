@@ -168,11 +168,25 @@ bpa=$(aws s3control get-public-access-block --account-id "$account" --output tex
 if [[ "$bpa" != none && "$bpa" != *False* ]]; then
   ok "S3 Block Public Access is on for the account"
 else
-  plan + "Turn on S3 Block Public Access for the account" bpa
+  # An account-wide setting: in an account that already has buckets, one of them may be public on purpose
+  # (a static website, say), and this would break it. The project's own bucket is private either way.
+  other_buckets=$(aws s3api list-buckets --query "length(Buckets[?!starts_with(Name, 'voiceover-studio-')])" \
+    --output text 2>/dev/null || echo unknown)
+  if [[ "$other_buckets" == 0 ]]; then
+    plan + "Turn on S3 Block Public Access for the account (no other buckets exist)" bpa
+  else
+    todo "-" "S3 Block Public Access for the account: left off, because the account has other buckets"
+    note "  (the project's bucket blocks public access on its own; turn the account setting on if none should be public)"
+  fi
 fi
 
+# shellcheck disable=SC2016 # the backticks below are a JMESPath literal, not shell
 if exists aws budgets describe-budget --account-id "$account" --budget-name "$ACCOUNT_BUDGET"; then
   ok "Account budget $ACCOUNT_BUDGET exists"
+elif [[ $(aws budgets describe-budgets --account-id "$account" --query 'length(Budgets || `[]`)' \
+  --output text 2>/dev/null || echo 0) != 0 ]]; then
+  # An account already in use has its own budgets; a $30 one on top would only send noise.
+  ok "The account already has budgets: no extra account budget added"
 else
   plan + "Create the account budget $ACCOUNT_BUDGET (\$${ACCOUNT_BUDGET_USD:-30}/month, emails to $BUDGET_EMAIL)" budget
 fi
