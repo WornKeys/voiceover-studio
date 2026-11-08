@@ -61,7 +61,7 @@ only stops the watching; `./scripts/deploy.sh --follow` picks it up again.
 | Command | What it does |
 |---|---|
 | `./scripts/connect.sh [port]` | Starts the instance if it's stopped, waits for the app, opens the tunnel |
-| `./scripts/stop.sh` | Stops the instance. Everything is kept; only the disk is charged (~$8/month for 100 GB) |
+| `./scripts/stop.sh` | Stops the instance. Everything is kept; only the disk is charged (~$12/month for 150 GB) |
 | `./scripts/start.sh` | Starts it and waits for the app |
 | `./scripts/status.sh` | State, app health, GPU memory, last deploy log lines |
 | `./scripts/secret.sh put /voiceover-studio/hf-token` | Stores a secret (typed in, never shown) in SSM Parameter Store |
@@ -79,7 +79,7 @@ us-east-1 on-demand prices; check current prices for your region.
 | Item | Price |
 |---|---|
 | g6.xlarge (L4 24 GB) while running | ≈ $0.80 / hour |
-| 100 GB gp3 disk, running or stopped | ≈ $8 / month |
+| 150 GB gp3 disk, running or stopped | ≈ $12 / month |
 | Public IPv4 address while running | ≈ $0.005 / hour |
 | S3, logs, alarm, budget | cents |
 
@@ -120,6 +120,7 @@ carries the tag `project=voiceover-studio`, so **Resource Groups > Tag Editor** 
 | `InsufficientInstanceCapacity` | AWS has no free GPU in that zone. Wait a few minutes, or set `AVAILABILITY_ZONE` and run `./scripts/deploy.sh --replace-instance`. `INSTANCE_TYPE=g5.xlarge` is the fallback |
 | `AccessDenied` from Terraform | The deploy role doesn't allow that action. That's the guardrails working: check what you changed |
 | Deploy fails on the instance | The output shows the failing step. Full log: `/var/log/voiceover-update.log` (`aws ssm start-session --target <instance-id>` as the deploy role), or CloudWatch log group `/voiceover-studio/app` |
+| `Not enough disk space`, `no space left on device`, `failed to extract layer` | Raise `ROOT_VOLUME_GB` in `.env` (150 is the default, 200 the maximum), then `./scripts/deploy.sh`. The plan replaces the instance: a disk can't be resized in place by the deploy role |
 | The app says the voice model is out of memory | Lower `LLM_GPU_MEMORY` (e.g. 0.45) and `LLM_MAX_MODEL_LEN`, then deploy |
 | Your AWS session expired during a long deploy | The install keeps running on the instance. Sign in again and run `./scripts/deploy.sh --follow` |
 | `An install is already running on the instance` | Follow it: `./scripts/deploy.sh --follow` |

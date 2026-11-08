@@ -42,9 +42,9 @@ variable "ami_id" {
 }
 
 variable "root_volume_gb" {
-  description = "Disk size: OS + Docker images + models (~30 GB). Charged while the instance is stopped too."
+  description = "Disk size: the AMI (OS, CUDA), Docker images (~30 GB unpacked) and models (~13 GB). Charged while stopped too."
   type        = number
-  default     = 100
+  default     = 150
 
   validation {
     condition     = var.root_volume_gb >= 30 && var.root_volume_gb <= 200

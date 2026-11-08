@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stop the instance. Everything is kept (disk, models, bucket); only the disk is charged (~$8/month for 100 GB).
+# Stop the instance. Everything is kept (disk, models, bucket); only the disk is charged (~$12/month for 150 GB).
 # To remove everything instead: ./scripts/destroy.sh
 # shellcheck source=scripts/toolbox/lib.sh
 source scripts/toolbox/lib.sh

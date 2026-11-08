@@ -12,7 +12,7 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 | Service | What we use | Purpose | Created by | Cost | Removed by `destroy.sh` |
 |---|---|---|---|---|---|
 | **Amazon EC2** | 1 instance `voiceover-studio`: g6.xlarge (NVIDIA L4 24 GB, 4 vCPU, 16 GiB) | Runs the app and both models | Terraform | ≈ $0.80/h while running; $0 while stopped | Yes |
-| EC2: **EBS** | 1 gp3 root volume, 100 GB, encrypted, 3000 IOPS / 125 MB/s (free baseline) | OS, Docker images, models (~30 GB) | Terraform | ≈ $8/month, **also while stopped** | Yes (deleted with the instance) |
+| EC2: **EBS** | 1 gp3 root volume, 150 GB, encrypted, 3000 IOPS / 125 MB/s (free baseline) | OS + CUDA (AMI), Docker images (~30 GB), models (~13 GB) | Terraform | ≈ $12/month, **also while stopped** | Yes (deleted with the instance) |
 | EC2: **AMI** | AWS Deep Learning Base OSS Nvidia Driver GPU AMI (Ubuntu 24.04), owned by Amazon | NVIDIA driver, Docker, NVIDIA Container Toolkit | AWS (we only use it) | Free | n/a |
 | EC2: **VPC** | The default VPC and one default subnet | Networking without creating anything | AWS (exists in every account) | Free | n/a (not ours) |
 | EC2: **security group** | `voiceover-studio`: no inbound rules; outbound 443 and 80 | Nothing can connect in | Terraform | Free | Yes |
@@ -64,3 +64,4 @@ Region: **us-east-1**. Prices are us-east-1 on-demand list prices (check current
 |---|---|
 | 2026-11-08 | First version: services as built in `infra/terraform/` and the account setup. Dry run in progress |
 | 2026-11-08 | SSM Run Command: the install now runs as a background systemd service on the instance; Run Command only starts it and reads its log every 15 s (one long command hit its time limit in the dry run) |
+| 2026-11-08 | EBS root volume 100 → 150 GB (≈ $8 → $12/month, also while stopped): the first install ran out of disk unpacking the vLLM image. A size change replaces the instance (the deploy role can't resize volumes; `terraform_data` + `replace_triggered_by`) |

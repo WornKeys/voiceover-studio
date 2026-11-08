@@ -24,9 +24,18 @@ finish() {
   local rc=$?
   rm -f /run/voiceover/updating
   echo "$RELEASE $rc" >"$ROOT/update-result"
-  if ((rc != 0)); then echo "==> $(date -u +%H:%M:%S) Failed (exit code $rc)"; fi
+  if ((rc != 0)); then
+    echo "==> $(date -u +%H:%M:%S) Failed (exit code $rc). Disk: $(disk)"
+    if (($(free_gb) < 5)); then
+      echo "    The disk is full. Set ROOT_VOLUME_GB=150 (or more, up to 200) in .env, then run"
+      echo "    ./scripts/deploy.sh (the plan replaces the instance with the bigger disk)"
+    fi
+  fi
 }
 trap finish EXIT
+
+disk() { df -h --output=used,size,avail / | tail -n 1 | awk '{ print $1 " used of " $2 ", " $3 " free" }'; }
+free_gb() { df --output=avail -BG / | tail -n 1 | tr -dc 0-9; }
 
 # Read one KEY=value from the settings file (no `source`: values are data, not shell code).
 setting() { sed -n "s/^$1=//p" "$ROOT/app.env" | tail -n 1; }
@@ -89,14 +98,36 @@ if [[ "$profile" == cpu ]]; then
   compose+=(-f "$ROOT/current/docker/compose.cpu.yaml")
 fi
 
+# Enough disk for what isn't there yet? Downloading an image needs room for the compressed and the unpacked copy.
+step "Disk: $(disk)"
+need=15 # models (~13 GB when new), logs, room to work
+while read -r image; do
+  docker image inspect "$image" >/dev/null 2>&1 && continue
+  case "$image" in
+    vllm/*) need=$((need + 30)) ;; # ~9 GB download, ~20 GB unpacked
+    *) need=$((need + 20)) ;;      # the app image: ~10 GB, plus room to build it
+  esac
+done < <("${compose[@]}" config --images)
+if (($(free_gb) < need)); then
+  echo "Not enough disk space: about $need GB free is needed, $(free_gb) GB is. Set ROOT_VOLUME_GB=150 (up to 200)" >&2
+  echo "in .env, then run ./scripts/deploy.sh (the plan replaces the instance with the bigger disk)" >&2
+  exit 1
+fi
+
+if [[ "$COMPOSE_PROFILES" == *local-llm* ]]; then
+  step "Downloading the script writer's server image (vLLM, ~9 GB; first time only)"
+  "${compose[@]}" pull --quiet llm
+fi
+
 step "Building the app image (the first build downloads ~5 GB of Python packages)"
 "${compose[@]}" build --pull app
+docker builder prune -f >/dev/null # leftovers from earlier builds
 
 step "Downloading and loading the voice, speech-to-text and watermark models"
 "${compose[@]}" stop app >/dev/null 2>&1 || true
 "${compose[@]}" run --rm --no-deps app python -m voiceover_studio.prefetch
 
-step "Starting (the first start of the script writer downloads ~9 GB; up to 30 minutes)"
+step "Starting (the first start of the script writer downloads its ~9 GB model; up to 30 minutes)"
 "${compose[@]}" up -d --remove-orphans --wait --wait-timeout 2700
 "${compose[@]}" ps --format 'table {{.Service}}\t{{.Status}}'
 curl -fsS http://127.0.0.1:7860/api/health
@@ -107,4 +138,4 @@ find "$ROOT/releases" -mindepth 1 -maxdepth 1 -type d ! -name "$RELEASE" -printf
   sort -rn | tail -n +3 | cut -d' ' -f2- | xargs -r rm -rf
 docker image prune -f >/dev/null
 
-step "Ready"
+step "Ready. Disk: $(disk)"

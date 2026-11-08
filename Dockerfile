@@ -11,8 +11,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg sox curl \
     && rm -rf /var/lib/apt/lists/*
 
+# No uv download cache: it would keep another ~5 GB of wheels on the instance's disk.
 ENV UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy \
+    UV_NO_CACHE=1 \
     UV_PYTHON_DOWNLOADS=never \
     XDG_CACHE_HOME=/cache \
     HF_HOME=/cache/huggingface \
@@ -21,13 +22,11 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /app
 # Dependencies first (a separate layer, so code changes don't reinstall torch).
 COPY pyproject.toml uv.lock README.md LICENSE ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --extra gpu --no-install-project
+RUN uv sync --locked --no-dev --extra gpu --no-install-project
 
 COPY config.yaml ./
 COPY voiceover_studio ./voiceover_studio
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --extra gpu
+RUN uv sync --locked --no-dev --extra gpu
 
 # Run as a normal user. /cache holds the model downloads (a host folder, kept across rebuilds).
 RUN useradd --uid 10001 --create-home app && mkdir -p /cache && chown app /cache

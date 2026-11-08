@@ -53,7 +53,7 @@ load_env() {
   export TF_VAR_region=$AWS_REGION
   export TF_VAR_compute_profile=$COMPUTE_PROFILE
   export TF_VAR_instance_type=$INSTANCE_TYPE
-  export TF_VAR_root_volume_gb=${ROOT_VOLUME_GB:-100}
+  export TF_VAR_root_volume_gb=${ROOT_VOLUME_GB:-150}
   export TF_VAR_idle_stop_minutes=${IDLE_STOP_MINUTES:-30}
   export TF_VAR_budget_monthly_usd=${BUDGET_MONTHLY_USD:-30}
   export TF_VAR_budget_email=${BUDGET_EMAIL:-}
@@ -195,11 +195,13 @@ exit \$rc"
 follow_update() {
   local id=$1 shown=0 out state result lines count new_lines
   while :; do
-    # Lines are capped at 200 characters and 100 per poll: SSM returns at most 24,000 characters of output.
+    # SSM returns at most 24,000 characters of output: 60 lines per poll, and long lines shortened in the
+    # middle (the end of an error message is usually the important part).
     out=$(run_remote "$id" 60 "start=\$(cat /opt/voiceover/update-log-start 2>/dev/null || echo 0)
 echo \"STATE \$(systemctl is-active voiceover-update 2>/dev/null || true)\"
 echo \"RESULT \$(cat /opt/voiceover/update-result 2>/dev/null || true)\"
-tail -n +\$((start + $shown + 1)) /var/log/voiceover-update.log 2>/dev/null | head -n 100 | cut -c1-200" capture) ||
+tail -n +\$((start + $shown + 1)) /var/log/voiceover-update.log 2>/dev/null | head -n 60 |
+  awk '{ if (length(\$0) > 360) print substr(\$0, 1, 180) \" [...] \" substr(\$0, length(\$0) - 169); else print }'" capture) ||
       die "Couldn't read the install log (see above)."
     state=$(sed -n 's/^STATE //p' <<<"$out" | head -n 1)
     result=$(sed -n 's/^RESULT //p' <<<"$out" | head -n 1)
@@ -212,10 +214,10 @@ tail -n +\$((start + $shown + 1)) /var/log/voiceover-update.log 2>/dev/null | he
       shown=$((shown + count))
     fi
     if [[ "$state" != active && "$state" != activating ]]; then
-      ((count == 100)) && continue # finished, but there are more lines to show
+      ((count == 60)) && continue # finished, but there are more lines to show
       break
     fi
-    ((count == 100)) || sleep 15
+    ((count == 60)) || sleep 15
   done
   [[ -n "$result" ]] || die "The install stopped without finishing (the instance may have been stopped).
        Log on the instance: /var/log/voiceover-update.log. Run ./scripts/deploy.sh again."

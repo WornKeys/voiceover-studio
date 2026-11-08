@@ -43,6 +43,12 @@ locals {
   ]...)
 }
 
+# The deploy role can't resize a volume in place (no ec2:ModifyVolume), so a new disk size means a new
+# instance. The plan shows the replacement, and deploy.sh asks before applying it.
+resource "terraform_data" "root_volume_size" {
+  input = var.root_volume_gb
+}
+
 resource "aws_instance" "app" {
   ami                    = data.aws_ami.chosen.id
   instance_type          = var.instance_type
@@ -82,7 +88,8 @@ resource "aws_instance" "app" {
   lifecycle {
     # A newer AMI or changed first-boot script must not silently replace the instance (and its downloaded
     # models). To move to a new image on purpose: ./scripts/deploy.sh --replace-instance
-    ignore_changes = [ami, user_data]
+    ignore_changes       = [ami, user_data]
+    replace_triggered_by = [terraform_data.root_volume_size]
 
     precondition {
       condition     = var.root_volume_gb >= local.ami_min_volume_gb
