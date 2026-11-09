@@ -7,7 +7,8 @@ if used to imitate someone else. This page explains what the tool is for and wha
 
 - Voiceovers in **your own voice** for your own videos, courses, demos and presentations.
 - A voice whose owner has **given you explicit permission**, recorded through the consent step.
-- The synthetic demo voice shipped in `samples/` (it belongs to no real person).
+- A synthetic voice designed by a model from a text description, which belongs to no real person (`v1.0.0`
+  ships none; a demo voice is planned).
 
 ## Not permitted
 

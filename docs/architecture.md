@@ -238,7 +238,7 @@ start. The models load from the disk cache in a few minutes.
 | `scripts/toolbox/` | The real logic, run inside the toolbox (bash 5, pinned tools) |
 | `toolbox/Dockerfile` | Terraform 1.16.7, AWS CLI 2.38.6, Session Manager plugin 1.2.889.0 |
 | `scripts/check_no_audio.py`, `scripts/smoke_models.py` | Keeps recordings out of git; real-model smoke test |
-| `docs/` | This guide, deploy guide, AWS services, plugin guide |
+| `docs/` | This guide, deploy guide, AWS services, plugin guide, the guided tour (`learn/`), README images (`images/`) |
 
 ## 7. Working on it
 
@@ -298,13 +298,18 @@ Dependabot (`.github/dependabot.yml`) proposes weekly updates for the Python pac
 All tested together on 2026-11-08. A `*_MODEL_REVISION` setting overrides a model pin; a model that isn't a
 default loads its latest version unless you set one.
 
-## 9. Known gaps (as of 2026-11-08)
+## 9. Known gaps
+
+As of `v1.0.0` (2026-11-09).
 
 - Tested end to end on AWS in November 2026: account setup, deploy, voice, script, render, `destroy.sh`, and a clean
   re-deploy (26 minutes).
-- MP3 output isn't implemented (WAV, SRT and provenance only).
+- MP3 output isn't implemented (WAV, SRT and provenance only). MP3, M4A and WAV are accepted as voice uploads.
 - Microphone recording freezes in Brave (fingerprinting protection); the gradio fix needs gradio ≥ 6.29.1, which
-  `qwen-tts` 0.1.1 blocks. Firefox works, and so do Chrome 156 and Edge 157 (tested with a simulated microphone, 2026-11-08).
+  `qwen-tts` 0.1.1 blocks. Firefox, Chrome and Edge work: Chrome 156 and Edge 157 with a simulated microphone
+  (2026-11-08), then all three on the redeployed instance with a real one (2026-11-09).
+- Amazon Bedrock as the script writer: the OpenAI-compatible adapter supports it (`LLM_AUTH=bedrock`), but the
+  instance role and the account policies don't grant `bedrock:InvokeModel` yet, so it doesn't work out of the box.
 - `scripts/bootstrap.sh` ran once against the real (hand-configured) account on 2026-11-08: it added the two
   missing pieces and, before the fix below, a duplicate operator policy. `--remove` and a fresh account are
   tested against a fake AWS CLI only.
