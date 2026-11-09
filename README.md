@@ -6,8 +6,11 @@ Describe your video, let an open-weight LLM draft the script, edit it, and get a
 cloned voice**, with captions. Everything runs on a GPU server in your own AWS account: your voice sample and
 scripts never leave it (unless you choose a hosted provider).
 
-> **Status:** tested end to end on AWS in November 2026 (set up, record, write, generate, remove everything). The
-> walkthrough is the *AI Voiceover Studio* series on [wornkeys.dev](https://wornkeys.dev), being published now.
+> **Status:** `v1.0.0`, tested end to end on AWS in November 2026 (set up, record, write, generate, remove
+> everything). The walkthrough is the three-part *AI Voiceover Studio* series on wornkeys.dev:
+> [1. voice cloning and running it](https://wornkeys.dev/keystrokes/ai-voiceover-studio-voice-cloning/) ·
+> [2. the pipeline and UI](https://wornkeys.dev/keystrokes/ai-voiceover-studio-pipeline-and-ui/) ·
+> [3. the AWS side and costs](https://wornkeys.dev/keystrokes/ai-voiceover-studio-aws-and-costs/).
 
 ## How it works
 
